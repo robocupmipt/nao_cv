@@ -5,13 +5,7 @@ Created on Wed Nov 14 19:10:54 2018
 @author: user
 """
 
-import random
-import math
-import os
-import numpy as np
-from collections import defaultdict
 import cv2
-from tqdm import tqdm
 classifiers=['other_cascade.xml','top_cascade.xml','bottom_cascade.xml']
 #First classifier was taken from https://github.com/dbloisi/detectball
 #Other two classifiers were taken from http://www.dis.uniroma1.it/~labrococo/?q=node/459
