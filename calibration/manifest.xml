@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<package uuid="calibration-9e23fa" version="0.0.0">
+ <names>
+  <name lang="en_US">Calibration</name>
+ </names>
+ <descriptionLanguages>
+  <language>en_US</language>
+ </descriptionLanguages>
+ <contents>
+  <behaviorContent path="movementTest">
+   <nature>interactive</nature>
+   <permissions/>
+  </behaviorContent>
+ </contents>
+</package>
