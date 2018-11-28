@@ -1,2 +1,2 @@
 Here is the Python Choregraphe script for calibration
-Dependency list https://pastebin.com/fchtc3nQ
+opencv-python version MUST BE NOT HIGHER THAN 3.3.0.9 
