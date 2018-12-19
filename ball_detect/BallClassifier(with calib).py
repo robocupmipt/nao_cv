@@ -14,16 +14,57 @@ import cv2
 from tqdm import tqdm
 os.chdir('C://Users//user//Downloads')
 classifiers=['ball_cascade.xml','top_cascade.xml','bottom_cascade.xml']
-camera_matrix = np.zeros((3,3))
-camera_matrix[0,0]=1462
-camera_matrix[0,2]=3248
-camera_matrix[1,1]=1002
-camera_matrix[1,2]=-6
-camera_matrix[2,2]=1
-dist_coeffs = np.array([1.223,-2.118,-0.213,-0.048,3.254])
-rms = 5.70
+#camera_matrix = np.zeros((3,3))
+#camera_matrix[0,0]=1371
+#camera_matrix[0,2]=304
+#camera_matrix[1,1]=1002
+#camera_matrix[1,2]=39
+#camera_matrix[2,2]=1
+#dist_coeffs = np.array([1.23,-3.22,-0.19,-0.11,8.11])
+camera_matrix=np.array([[ 1.46240075e+03,  0.00000000e+00,  3.24806002e+02],
+ [ 0.00000000e+00,  1.00206827e+03, -6.17942773e+00],
+ [ 0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
 
+dist_coefs=np.array([[ 1.22394222, -2.11858604, -0.21379144, -0.04868427,  3.25447246]])
 cell_size=2.65#сантиметров
+
+
+#img = cv2.imread('BALL1.jpg')
+#
+#h,  w = img.shape[:2]
+#mtx=np.array(camera_matrix)
+#dist=np.array(dist_coeffs)
+#w,h=480,640
+#newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
+#
+#dst1 = cv2.undistort(img, mtx, dist, None, newcameramtx)
+#
+## crop the image
+#x,y,w,h = roi
+#dst1 = dst1[y:y+h, x:x+w]
+#cv2.imwrite('calibresult1.png',dst1)
+#
+#
+#mean_error = 0
+#for i in xrange(len(objpoints)):
+#    imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
+#    error = cv2.norm(imgpoints[i],imgpoints2, cv2.NORM_L2)/len(imgpoints2)
+#    tot_error += error
+
+
+#mapx,mapy = cv2.initUndistortRectifyMap(mtx,dist,None,newcameramtx,(w,h),5)
+#dst = cv2.remap(img,mapx,mapy,cv2.INTER_LINEAR)
+#assert dst.max()>0
+## crop the image
+#x,y,w,h = roi
+#dst = dst[y:y+h, x:x+w]
+## undistort
+#dst1 = cv2.undistort(img, mtx, dist, None, newcameramtx)
+#assert dst.max()>0
+## crop the image
+#x,y,w,h = roi
+#dst = dst[y:y+h, x:x+w]
+#cv2.imwrite('calibresult.png',dst)
 '''
 Значения матрицы камеры и коэффициентов дисторсии пока неточные,
 они будут обновлены позднее по завершению расчетов.
@@ -81,29 +122,38 @@ class HaarClassifier():
             return None
         return balls
     def predict(self, image, camera_matrix=camera_matrix, 
-        dist_coeffs=dist_coeffs,include_distortion=False):
+        dist_coeffs=dist_coeffs,include_distortion=True,save_image=True,save_dir='DETECTED_BALL.jpg'):
         if include_distortion:
-            processed_matrix = None
-            processed_image=None
-            print('Distortion coeffs are not still handled correctly')
-            raise Exception
+            w,h=image.shape[:2]
+            newcameramtx, roi=cv2.getOptimalNewCameraMatrix(camera_matrix,dist_coeffs,(w,h),1,(w,h))
+
+            processed_image = cv2.undistort(image, camera_matrix,dist_coeffs, None, newcameramtx)
+
+# crop the image
+            x,y,w,h = roi
+            processed_image=processed_image[y:y+h, x:x+w]
+            processed_matrix = newcameramtx
+
         else:
             processed_matrix = camera_matrix
-            processed_invmatrix = np.linalg.inv(processed_matrix)
-            processed_image = image        
-        image_coords = self.predict(
+            processed_image = image  
+        processed_invmatrix = np.linalg.inv(processed_matrix)
+        processed_involdmatrix = np.linalg.inv(camera_matrix)
+        image_coords = self.predict_onimage(
         processed_image, save_image = False,print_=False)
         if image_coords is None:
             return []
         x, y, w, h = image_coords[0]
         image_coords = [[x,y,1], [x, y+h,1],[x+w,y,1],[x+w,y+h,1]]
-        real_coords = [cell_size*np.matmul(processed_invmatrix, np.array(ball_coord))
+        real_coords = [cell_size*np.matmul(processed_involdmatrix, np.array(ball_coord))
             for ball_coord in image_coords]
+        real_xywh =( real_coords[0][0],real_coords[0][1],
+        real_coords[3][0]-real_coords[0][0],real_coords[3][1]-real_coords[0][1])
         return real_coords
         
 cls = HaarClassifier(classifier_dir = classifiers[0])
 image = cv2.imread('BALL1.jpg')
-cls.predict(image, save_image=True, save_dir ='DETECTED_BALL1.jpg')  
+cls.predict_onimage(image, save_image=True, save_dir ='DETECTED_BALL1.jpg')  
 image = cv2.imread('BALL2.jpg')
 cls.predict(image, save_image=True, save_dir ='DETECTED_BALL2.jpg')  
 
