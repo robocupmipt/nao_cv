@@ -14,18 +14,12 @@ import cv2
 from tqdm import tqdm
 os.chdir('C://Users//user//Downloads')
 classifiers=['ball_cascade.xml','top_cascade.xml','bottom_cascade.xml']
-#camera_matrix = np.zeros((3,3))
-#camera_matrix[0,0]=1371
-#camera_matrix[0,2]=304
-#camera_matrix[1,1]=1002
-#camera_matrix[1,2]=39
-#camera_matrix[2,2]=1
-#dist_coeffs = np.array([1.23,-3.22,-0.19,-0.11,8.11])
-camera_matrix=np.array([[ 1.46240075e+03,  0.00000000e+00,  3.24806002e+02],
- [ 0.00000000e+00,  1.00206827e+03, -6.17942773e+00],
+
+camera_matrix=np.array([[ 1.47612124e+03,  0.00000000e+00,  3.09005307e+02],
+ [ 0.00000000e+00,  1.06518129e+03, -6.29354626e+01],
  [ 0.00000000e+00,  0.00000000e+00,  1.00000000e+00]])
 
-dist_coefs=np.array([[ 1.22394222, -2.11858604, -0.21379144, -0.04868427,  3.25447246]])
+dist_coefs=np.array([[ 1.05995926, -1.21305323, -0.25346465, -0.04999029,  1.28114937]])
 cell_size=2.65#сантиметров
 
 
