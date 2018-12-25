@@ -155,7 +155,8 @@ def CenterOfMassUp(image):
     CM = BallFinder.predict_ballcenter(image)
 
     return CM
-
+def CenterOfMassDown(image):#необходимость этой функции нуждается в уточнении
+    return CenterOfMassUp(image)
 
 
 # Find the center of mass of the ball
@@ -382,7 +383,7 @@ def walkDown(cm, delta):
         im_num = path + pp+str(idx)+ext
         pic(im_num, 1)
         img = cv2.imread(im_num)
-        cm = CenterOfMassUp(img)
+        cm = CenterOfMassDown(img)
         print im_num, cm
         if cm == [0, 0]:
             return 0, cm
@@ -404,7 +405,7 @@ def getReady(cm, delta):
     im_num = path + pp+str(idx-1)+ext
     pic(im_num, 1)
     img = cv2.imread(im_num)
-    cm = CenterOfMassUp(img)
+    cm = CenterOfMassDown(img)
     alpha = (cm[1] - 320) * delta
     motion.moveTo(0, 0, alpha*7/6)
     print 'Precising the position'
@@ -414,7 +415,7 @@ def getReady(cm, delta):
         im_num = path + pp+str(idx)+ext
         pic(im_num, 1)
         img = cv2.imread(im_num)
-        cm = CenterOfMassUp(img)
+        cm = CenterOfMassDown(img)
         print im_num, cm
         if cm == [0, 0]:
             return 0, cm
