@@ -1,6 +1,14 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
+Created on Tue Dec 25 19:57:07 2018
+
+@author: robocup
+"""
+
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
 Created on Tue Dec 25 19:17:36 2018
 
 @author: robocup
@@ -15,10 +23,9 @@ import numpy as np
 import motion as mot
 
 # Python Image Library
-import Image
+from PIL import Image
 # OpenCV Libraries
 import cv2
-import cv2.cv as cv
 
 class HaarClassifier():
     def __init__(self,classifier_dir = 'ball_cascade.xml',
@@ -63,15 +70,17 @@ class HaarClassifier():
         return balls
     def predict_ballcenter(self, image):#We predict only ball center coordinates
         ball_coords=self.predict_onimage(image)
-        if not ball_coords:#no ball found
+        if ball_coords is None or len(ball_coords)==0:#no ball found
             return [0,0]
-        x,y,w,h = ball_coords
+        x,y,w,h = ball_coords[0]
         center_x=x+(w//2)
         center_y=y+(h//2)
         return center_x, center_y
-BallFinder = HaarClassifier('ball_cascade.xml')
+import os
+os.chdir('/home/robocup/QUALTEST')
+BallFinder = HaarClassifier('top_cascade.xml')
 ''' ROBOT CONFIGURATION '''
-robotIP = "169.254.194.108"
+robotIP = "192.168.1.31"
 ses = qi.Session()
 ses.connect(robotIP)
 per = qi.PeriodicTask()
@@ -268,7 +277,7 @@ def pic(_name, CameraIndex):
     imageWidth = naoImage[0]
     imageHeight = naoImage[1]
     array = naoImage[6]
-    im = Image.fromstring("RGB", (imageWidth, imageHeight), str(array))
+    im = Image.frombytes("RGB", (imageWidth, imageHeight), str(array))
     im.save(_name, "PNG")
 
 # Funtion that will look for position of the ball and return it
@@ -498,12 +507,14 @@ def set_head_position(_angle):
 def zero_head():
     motion.angleInterpolationWithSpeed("HeadYaw", 0, 0.1)
 
-def main(robotIP, PORT=9559):
+def main(robotIP, PORT=9559,num_iter=5):
 
     #Wake up the robot
     motion.wakeUp()
     taskCompleteFlag = 0
-    while taskCompleteFlag == 0:
+    num_iter = num_iter
+    i=0
+    while taskCompleteFlag == 0 and i<num_iter:
         ballPosition, delta, camIndex = initial_scan()
         if camIndex == 0:
             zero_head()
@@ -531,6 +542,7 @@ def main(robotIP, PORT=9559):
             # Walk to the ball using lower camera
             taskCompleteFlag, CoM1 = walkDown(ballPosition, delta)
             taskCompleteFlag = getReady(CoM1, delta)
+        i+=1
     kickBall()
     motion.rest()
 
