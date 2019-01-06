@@ -560,7 +560,7 @@ def main(robotIP, PORT=9559,num_iter=5):
             taskCompleteFlag, CoM1 = walkDown(ballPosition, delta)
             taskCompleteFlag = getReady(CoM1, delta)
         i+=1
-    kickBall()
+    kickBall('right')
     motion.rest()
 
 
