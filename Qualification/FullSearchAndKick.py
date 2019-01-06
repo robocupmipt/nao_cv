@@ -77,6 +77,7 @@ class HaarClassifier():
         center_y=y+(h//2)
         return center_x, center_y
 import os
+USE_CUSTOM_MODULE=False
 os.chdir('/home/robocup/QUALTEST')
 BallFinder = HaarClassifier('top_cascade.xml')
 ''' ROBOT CONFIGURATION '''
@@ -91,12 +92,20 @@ video = ses.service('ALVideoDevice')
 tts = ses.service('ALTextToSpeech')
 landmark = ses.service('ALLandMarkDetection')
 memory = ses.service('ALMemory')
-
+movement=None
+if USE_CUSTOM_MODULE:#MovementGraph module from neighbouring repository
+    movement=ses.service('MovementGraph')
+    
 resolution = 2    # VGA
 colorSpace = 11   # RGB
 trial_number = 12
 path = 'trials/trial' + str(trial_number) + '/'
-
+def move(x,y,theta,USE_CUSTOM_MODULE=USE_CUSTOM_MODULE):
+    global motion,movenent
+    if USE_CUSTOM_MODULE:
+       movement.move(x,y,theta)
+    else:
+       motion.moveTo(x,y,theta)
 # During the initial scan, take a few pictures to analize where's the ball
 def take_pics(angleScan, CameraIndex):
     names = "HeadYaw"
@@ -297,16 +306,19 @@ def initial_scan():
         if found == 0 and camIndex == 1:
             state = state + 1
             camIndex = 0
-            motion.moveTo(0, 0, 2*math.pi/3)
+            move(0,0,2*math.pi/3)
+
         elif found == 0 and camIndex == 0:
             camIndex = 1
         if state == 3:
             tts.say('I need to move to find the ball')
-            motion.moveTo(0.3, 0, 0)
+            move(0.3,0,0)
+
             state = 0
 
     else:
-        motion.moveTo(0, 0, ang*7/6)
+        move(0,0,ang*7/6)
+            
     pic(path + "ball_likely.png",0)
     [CC1, AA1] = take_pics(math.pi /9, camIndex)
     print CC1
@@ -315,7 +327,7 @@ def initial_scan():
         camIndex = 2
     print 'Delta', delta
     print 'Ang', ang
-    motion.moveTo(0, 0, ang*7/6)
+    move(0, 0, ang*7/6)
     img=cv2.imread(path + "ball_likely.png")
     CM=CenterOfMassUp(img)
         
@@ -325,7 +337,7 @@ def walkUp(cm, delta):
     idx = 1
     lowerFlag = 0
     print "Entering uppercam loop"
-    motion.moveTo(0.2, 0, 0)
+    move(0.2, 0, 0)
     while cm[0] < 420 and cm[0] > 0:
         pp = "ball_upfront"
         ext = ".png"
@@ -343,7 +355,7 @@ def walkUp(cm, delta):
             break
         else:
             alpha = (cm[1] - 320) * delta
-            motion.moveTo(0.2, 0, alpha*7/6)
+            move(0.2, 0, alpha*7/6)
             idx = idx + 1
             continue
     if lowerFlag == 1:
@@ -360,7 +372,7 @@ def walkUp(cm, delta):
         lostFlag = 0
     print "Exiting up loop"
     return lostFlag, cm2
-    # motion.moveTo(0.15, 0, 0)
+    # move(0.15, 0, 0)
 
 def walkDown(cm, delta):
     idx = 1
@@ -368,7 +380,7 @@ def walkDown(cm, delta):
     ext = ".png"
     print 'Entering lowercam loop'
     # motion.moveTo(0.2, 0, alpha*7/6)
-    motion.moveTo(0.2, 0, 0)
+    move(0.2, 0, 0)
     while cm[0] > 0 and cm[0] < 230:
         # motion.moveTo(0.2, 0, 0)
         im_num = path + pp+str(idx)+ext
@@ -379,7 +391,7 @@ def walkDown(cm, delta):
         if cm == [0, 0]:
             return 0, cm
         alpha = (cm[1] - 320) * delta
-        motion.moveTo(0.2, 0, alpha*7/6)
+        move(0.2, 0, alpha*7/6)
         idx = idx + 1
     # Tilt the head so it can have a better look of the ball
     anglePitch = math.pi * 20.6 / 180
@@ -398,7 +410,7 @@ def walkDown(cm, delta):
             return 0, cm
         if cm[0] < 350:
             alpha = (cm[1] - 320) * delta
-            motion.moveTo(0.07, 0, alpha*8/6)
+            move(0.07, 0, alpha*8/6)
         else: 
             break
         idx = idx + 1
@@ -416,7 +428,7 @@ def getReady(cm, delta):
     img = cv2.imread(im_num)
     cm = CenterOfMassDown(img)
     alpha = (cm[1] - 320) * delta
-    motion.moveTo(0, 0, alpha*7/6)
+    move(0, 0, alpha*7/6)
     print 'Precising the position'
     print 'This is my cm[0]', cm[0]
     while cm[0] < 370:
@@ -430,14 +442,19 @@ def getReady(cm, delta):
             return 0, cm
         if cm[0] < 405:
             alpha = (cm[1] - 320) * delta
-            motion.moveTo(0.05, 0, alpha)
+            move(0.05, 0, alpha)
         else:
             break
         idx = idx + 1
     return 1
     # This should exit at a good distance to kick the ball
 
-def kickBall():
+def kickBall(mode='right'):
+    if USE_CUSTOM_MODULE:
+        if mode=='right':
+            return movement.RightKick()
+        else:
+            return movement.LeftKick()
     # Activate Whole Body Balancer
     isEnabled  = True
     motion.wbEnable(isEnabled)
@@ -531,7 +548,7 @@ def main(robotIP, PORT=9559,num_iter=5):
                 taskCompleteFlag = getReady(CoM1, delta)
             else:
                 tts.say('I lost the ball, I need to rescan.')
-                motion.moveTo(-0.2, 0, 0)
+                move(-0.2, 0, 0)
         elif camIndex == 1:
             # Switch cameras
             time.sleep(0.2)
