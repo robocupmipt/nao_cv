@@ -7,10 +7,10 @@ Created on Tue Jan 15 21:35:47 2019
 """
 import qi
 from PIL import Image
-IP='192.168.1.14'
+IP='192.168.1.13'
 PORT=9559
 resolution = 2
-CameraIndex=1   # VGA
+CameraIndex=0   # VGA
 colorSpace = 11 
 ses = qi.Session()
 ses.connect(IP)
@@ -20,9 +20,9 @@ motionProxy  = ses.service('ALMotion')
 postureProxy = ses.service('ALRobotPosture')
 videoClient = video.subscribeCamera(
         "python_client", CameraIndex, resolution, colorSpace, 5)
-def get_photo(pitch=0,yaw=0,speed=0.1,
-              cameraIndex=1,
-              image_name=None,
+image_name='6.jpg'
+def get_photo(
+              image_name=None,pitch=0,yaw=0,speed=0.1,
               save_image=True
               ):
     '''
@@ -35,7 +35,7 @@ def get_photo(pitch=0,yaw=0,speed=0.1,
     '''
     if not image_name:
         image_name='IMAGE_'+str(yaw)+'_'+str(pitch)+'.jpg'
-    motionProxy.setAngles(["HeadPitch","HeadYaw"],[pitch,yaw],speed)#
+#    motionProxy.setAngles(["HeadPitch","HeadYaw"],[pitch,yaw],speed)#
 
     naoImage = video.getImageRemote(videoClient)
 
@@ -47,5 +47,10 @@ def get_photo(pitch=0,yaw=0,speed=0.1,
     if save_image:
         im.save(image_name)
     return im
-ff=get_photo()
+import sys
+arguments=sys.argv[1:]
+default_args=[None,0,0,0.1,True]
+for i in range(len(arguments)):
+    default_args[i]=arguments[i]
+ff=get_photo(default_args[0],default_args[1],default_args[2],default_args[3],default_args[4])
 video.unsubscribe(videoClient)
