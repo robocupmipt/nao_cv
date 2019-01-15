@@ -7,7 +7,7 @@ Created on Tue Jan 15 21:35:47 2019
 """
 import qi
 from PIL import Image
-IP='192.168.1.13'
+IP='192.168.1.14'
 PORT=9559
 resolution = 2
 CameraIndex=1   # VGA
@@ -18,7 +18,9 @@ YAW,PITCH=0,0
 video= ses.service('ALVideoDevice')
 motionProxy  = ses.service('ALMotion')
 postureProxy = ses.service('ALRobotPosture')
-def get_photo(pitch, yaw, speed,
+videoClient = video.subscribeCamera(
+        "python_client", CameraIndex, resolution, colorSpace, 5)
+def get_photo(pitch=0,yaw=0,speed=0.1,
               cameraIndex=1,
               image_name=None,
               save_image=True
@@ -32,12 +34,11 @@ def get_photo(pitch, yaw, speed,
     image_name - name used for saving(if not specified, default name is generated)
     '''
     if not image_name:
-        image_name='IMAGE_'+str(yaw)+'_'+str(pitch)
+        image_name='IMAGE_'+str(yaw)+'_'+str(pitch)+'.jpg'
     motionProxy.setAngles(["HeadPitch","HeadYaw"],[pitch,yaw],speed)#
-    videoClient = video.subscribeCamera(
-        "python_client", CameraIndex, resolution, colorSpace, 5)
+
     naoImage = video.getImageRemote(videoClient)
-    video.unsubscribe(videoClient)
+
         
     imageWidth = naoImage[0]
     imageHeight = naoImage[1]
@@ -46,3 +47,5 @@ def get_photo(pitch, yaw, speed,
     if save_image:
         im.save(image_name)
     return im
+ff=get_photo()
+video.unsubscribe(videoClient)
