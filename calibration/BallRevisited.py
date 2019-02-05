@@ -75,6 +75,7 @@ def get_newcoords(x,y, rt_index, s=s):
 #s=s*s1
 #cv2.imwrite('calibresult.png',dst)
 #image_name='ggfddgf'#Name of image we are testing on
+image_name='gdf'
 image_xy=[(0,1),(1,2),(2,3)]
 real_xy=[(5,1),(5,2),(5,3)]
 delta = 0
@@ -89,7 +90,7 @@ def edit_photo(image_name, rt_index=None):
         distances =[dist(predicted_xy[i],real_xy[i]) for i in range(len(real_xy))]
         avg_dists.append(sum(distances)/len(distances))
     return np.argmax(avg_dists),avg_dists   
-default_index = np.argmax(avg_dists) 
+edit_photo(image_name)
             
     
     
