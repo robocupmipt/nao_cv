@@ -1,0 +1,2 @@
+g++ -o goal_detection goal_detection.cpp `pkg-config opencv --cflags --libs`
+
