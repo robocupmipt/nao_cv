@@ -14,13 +14,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
-#from enum import Enum
-
 marker_color_min = (0, 240, 135)
 marker_color_max = (20, 255, 205)
-
-WIND_X = 640
-WIND_Y = 480
 
 def StiffnessOn(proxy):
     # We use the "Body" name to signify the collection of all joints
@@ -52,33 +47,6 @@ def find_marker (img, color):
         #cv2.imshow ("detected", img)
     
     return marker_coord
-
-def find_marker_chessboard (img):
-    print ("Not implemented yet")
-
-#class Turns(Enum):
-#    RIGHT   = 1
-#    LEFT    = 2
-#    NO_TURN = 3
-
-#MAX_ACCEPTBLE_EXCENTRICITY = 40
-
-#def turn_needed (marker_coords):
-#    if (marker_coords [0] < WIND_X / 2 - MAX_ACCEPTABLE_EXCENTRICITY):
-#	return Turns.LEFT
-	    
-#    elif (marker_coords [0] < WIND_X / 2 + MAX_ACCEPTABLE_EXCENTRICITY):
-#	return Turns.RIGHT
-
-#    return Turns.NOTURN
-
-#SHIFT_FROM_BOTTOM = 40
-
-#def walk_back (marker_coords):
-#    if (marker_coords [1] >= WIND_X - SHIFT_FROM_BOTTOM):
-#	return True
-
-#    return False
 
 def main(robotIP):
     # Init proxies.
@@ -150,7 +118,7 @@ def main(robotIP):
     nameId = video_service.subscribe("python_GVM", resolution, colorSpace, fps)
     
     #max_times = 20
-    max_times = 5
+    max_times = 3
     
     walk      = False
     walk_back = False
