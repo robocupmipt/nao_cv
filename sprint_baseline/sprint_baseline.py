@@ -44,8 +44,7 @@ class Line():
         self.y_min,self.y_max = min(y_extrs),max(y_extrs)
     def y(self,x):
         return self.k*x+self.b
-def getLines(image):
-    pass
+from line_detection import getLines
 def processLines(lines, X_checkpoint=X_DIM/2,Y_checkpoint=Y_DIM/2):
     left_xmax,right_xmin,center_ymin=0,9999,9999
     left_line,right_line,horisontal_line=None,None,None

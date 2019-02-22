@@ -48,7 +48,7 @@ def erase_little_parts (mask, area_th, hei_th, wid_th):
             result [labels == label_num] = 0 
     return result
 
-def draw_lines (img, mask = None):
+def getLines (img):
     
     field, f_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 61, use_rg = True)
     field2, f2_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 5, use_rg = True)
