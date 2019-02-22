@@ -47,10 +47,24 @@ def getLines(image):
 def processLines(lines, X_checkpoint=X_DIM/2,Y_checkpoint=Y_DIM/2):
     left_xmax,right_xmin,center_ymin=0,9999,9999
     left_line,right_line,horisontal_line=None,None,None
+    smallest_k = min([line.k for line in lines if line.k<0])
+    largest_k = max([line.k for line in lines if line.k>0])
+    n=2
+    def canBeLeft(line):
+        cond1 = (
+        line.xmax - line.xmin<(X_DIM/6) and (line.xmax+line.xmin)/2<X_DIM/2 )
+        cond2 = (line.k>largest_k/n)
+        return cond1 or cond2
+    def canBeRight(line):
+        cond1 = (
+        line.xmax - line.xmin<(X_DIM/6) and (line.xmax+line.xmin)/2<X_DIM/2 )
+        cond2 = (line.k<smallest_k/n)
+        return cond1 or cond2
+    
     for line in lines:
-        if (line.xmax<X_checkpoint and line.xmax>left_xmax):
+        if (canBeLeft(line) and line.xmax>left_xmax):
             left_line,left_xmax=line,  line.xmax
-        elif (line.xmin>X_checkpoint and line.xmin<right_xmin):
+        elif (canBeRight(line) and line.xmin<right_xmin):
             right_line,right_xmin = line, line.xmin
         else:
             center_y=(line.y_min + line.y_max)/2
