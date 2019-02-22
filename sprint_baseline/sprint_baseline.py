@@ -42,6 +42,8 @@ class Line():
         self.x_min,self.x_max = x_min,x_max
         y_extrs = [k*x_min+b,k*x_max+b]
         self.y_min,self.y_max = min(y_extrs),max(y_extrs)
+    def y(self,x):
+        return self.k*x+self.b
 def getLines(image):
     pass
 def processLines(lines, X_checkpoint=X_DIM/2,Y_checkpoint=Y_DIM/2):
@@ -71,7 +73,15 @@ def processLines(lines, X_checkpoint=X_DIM/2,Y_checkpoint=Y_DIM/2):
             if center_y<center_ymin:
                 horisontal_line,center_ymin=line,center_y
     return [left_line,horisontal_line,right_line]
-
+def log(image, lines,thickness=5):
+    t = str(time.time())
+    cv2.imwrite('prev_'+t,image)
+    colors=[(255,0,0),(0,255,0),(0,0,255)]
+    for (line,color) in zip(lines,colors):
+        if line is not None:
+            cv2.line(image,(line.xmin,line.y(line.x_min),
+            (line.x_max,line.y(line.x_max)),color,thickness))
+    cv2.imsave(t,image)
 def getChessboardCentre(image, pattern_size=pattern_size):#If we use chessboard
     '''
     image is np.array, pattern_size istuple
@@ -131,10 +141,13 @@ def BackCondition(line, center):
     if line is None or line.y_min>center.y:
         return 1
     return 0
-def ShouldTurn(image, allowed_gamma=100, X_checkpoint=X_DIM//2,Y_checkpoint=Y_DIM//2):
+def ShouldTurn(image, allowed_gamma=100, X_checkpoint=X_DIM//2,Y_checkpoint=Y_DIM//2,
+               log_lines= True):
     global TURNBACK_FLAG
     raw_lines = getLines(image)#list of objects class Line
     left_line,right_line,horisontal_line = processLines(raw_lines, X_checkpoint,Y_checkpoint)
+    if log_lines:
+        log(image,[left_line,right_line,horisontal_line])
     center = getChessboardCentre(image)#maybe other function and other object instead of chessboard
     back_condition = BackCondition(horisontal_line,center)
     line_condition = LineCondition(left_line,right_line)
@@ -232,7 +245,7 @@ def main(robotIP, time_lag = 2, stand_speed= 0.5):
         if this_time>prev_time+time_lag:
             img = get_photo(video_service, video_client, photo_ind=i)
             prev_time = time.time()
-        turn_command = ShouldTurn(img, allowed_gamma = 100)
+        turn_command = ShouldTurn(img, allowed_gamma = 100,log_lines=True)
         GetNewAngle(customProxy, turn_command)
         if STOP_FLAG:
             motionProxy.setWalkTargetVelocity(0,0,0,0)
