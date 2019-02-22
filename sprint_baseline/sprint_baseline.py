@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Feb 22 14:05:12 2019
+
+@author: user
+"""
+
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on Thu Feb 21 20:56:51 2019
-
 @author: asus
 """
 
@@ -22,11 +28,12 @@ import cv2
 import numpy as np
 from PIL import Image
 TURNBACK_FLAG=False
+STOP_FLAG = False
 #from enum import Enum
 
-marker_color_min = (0, 240, 135)
-marker_color_max = (20, 255, 205)
-
+marker_color_min = (0, 240, 135)#Min color of red box
+marker_color_max = (20, 255, 205)#Max color of red box
+pattern_size = (8,6)#Pattern size of chessboard
 X_DIM = 640
 Y_DIM = 480
 class Line():
@@ -49,9 +56,9 @@ def processLines(lines, X_checkpoint=X_DIM/2,Y_checkpoint=Y_DIM/2):
             center_y=(line.y_min + line.y_max)/2
             if center_y<center_ymin:
                 horisontal_line,center_ymin=line,center_y
-	return [left_line,horisontal_line,right_line]
+    return [left_line,horisontal_line,right_line]
 
-def getChessboardCentre(image, pattern_size):#If we use chessboard
+def getChessboardCentre(image, pattern_size=pattern_size):#If we use chessboard
     '''
     image is np.array, pattern_size istuple
     '''
@@ -62,7 +69,35 @@ def getChessboardCentre(image, pattern_size):#If we use chessboard
             if found:
                 ans = corners.sum(0)/len(corners)
     return ans
-                    
+def getRedboxCentre (image, color = (
+        marker_color_min, marker_color_max),
+    min_d_area=20):
+    hsv = cv2.cvtColor (image, cv2.COLOR_BGR2HSV)
+    thresh = cv2.inRange(hsv, color[0], color[1])
+    moments = cv2.moments(thresh, 1)
+    dM01 = moments['m01']
+    dM10 = moments['m10']
+    dArea = moments['m00']  
+    marker_coord = [-5, -5]    
+    print (dArea)
+    if dArea > min_d_area:
+        x = int(dM10 / dArea)
+        y = int(dM01 / dArea)
+        marker_coord[0] = x
+        marker_coord[1] = y    
+    return marker_coord
+
+def getObjectCentre(image,mode='chessboard'):
+    '''
+    Mode must be either 'chessboard' or 'redbox'
+    '''
+    if mode.lower()=='chessboard':
+        return getChessboardCentre(image)
+    elif mode.lower()=='redbox':
+        return getRedboxCentre(image)
+    else:
+        raise Exception('Unknown mode '+str(mode))
+               
 
 def ObjectCondition(center_y, allowed_gamma=100):
     if center_y < Y_DIM/2 - allowed_gamma:
@@ -82,7 +117,7 @@ def BackCondition(line, center):
     if line is None or line.y_min>center.y:
         return 1
     return 0
-def shouldTurn(image, allowed_gamma=100, X_checkpoint=X_DIM//2,Y_checkpoint=Y_DIM//2):
+def ShouldTurn(image, allowed_gamma=100, X_checkpoint=X_DIM//2,Y_checkpoint=Y_DIM//2):
     global TURNBACK_FLAG
     raw_lines = getLines(image)#list of objects class Line
     left_line,right_line,horisontal_line = processLines(raw_lines, X_checkpoint,Y_checkpoint)
@@ -98,15 +133,13 @@ def shouldTurn(image, allowed_gamma=100, X_checkpoint=X_DIM//2,Y_checkpoint=Y_DI
          return line_condition
     return 0
 
-def GetNewAngle(current_angle,turn_command, delta):
+def GetNewAngle(customProxy,turn_command, delta=20):
     '''
-    turn_command - result of ShouldTurn function
+    turn_command is a result of ShouldTurn function
+    delta is an angle we should rotate on
     '''
-    return current_angle + turn_command * delta
-
-
-
-
+    if abs(turn_command)>1e-2:
+        customProxy.Move(0,0,turn_command*delta)
 
 def StiffnessOn(proxy):
     # We use the "Body" name to signify the collection of all joints
@@ -115,209 +148,91 @@ def StiffnessOn(proxy):
     pTimeLists = 1.0
     proxy.stiffnessInterpolation(pNames, pStiffnessLists, pTimeLists)
 
-def find_marker (img, color):
-    hsv = cv2.cvtColor (img, cv2.COLOR_BGR2HSV)
-    thresh = cv2.inRange(hsv, color[0], color[1])
-    
-    moments = cv2.moments(thresh, 1)
-    dM01 = moments['m01']
-    dM10 = moments['m10']
-    dArea = moments['m00']
-    
-    marker_coord = [-5, -5]
-    
-    print (dArea)
-    
-    if dArea > 20:
-        x = int(dM10 / dArea)
-        y = int(dM01 / dArea)
-        marker_coord[0] = x
-        marker_coord[1] = y
-    
-        #cv2.circle (img, (x, y), 10, (0,0,255), -1)
-        #cv2.imshow ("detected", img)
-    
-    return marker_coord
 
-def find_marker_chessboard (img):
-    print ("Not implemented yet")
+def make_proxies(robotIP,port=9559, session=False):
+    '''
+    if session is False, ALProxys are created. 
+    Otherwise, connections through qi.Session are created.
 
-#class Turns(Enum):
-#    RIGHT   = 1
-#    LEFT    = 2
-#    NO_TURN = 3
+    '''
+    proxy_names = ['ALMotion','MovementGraph','ALRobotPosture',
+                   'ALVideoDevice']
+    proxy_list=[]
+    if not session:
+        for proxy_name in proxy_names:
+            try:
+                proxy_list.append(
+                ALProxy(proxy_name, robotIP,port))
+            except Exception as e:
+                print('Could not create proxy to '+proxy_name)
+                print('Error was: '+str(e))
+                raise Exception()
+    elif session:
+        sess = qi.Session()
+        try:
+            sess.connect("tcp://"+robotIP+":"+str(port))
+            for proxy_name in proxy_names:
+                proxy_list.append(sess.service(proxy_name))
+        except:
+            print('Can not connect at ip '+robotIP+' and port '+str(port))
+            raise Exception()
+    return proxy_list
+def subscribe(video_service, camera_id=0,
+              resolution=2, colorSpace=11,fps=5):
+    ###Subscribes videoservice to camera
+    ###I'm not sure if last parameter really stands for fps - it needs to be checked
+    return video_service.subscribeCamera(camera_id,resolution, colorSpace, fps)
 
-#MAX_ACCEPTBLE_EXCENTRICITY = 40
+def get_photo(video_service,video_client, photo_ind = 0, time_est=True):
+    '''
+    Note: video_service must be first and video_client second. Not vice versa
+    '''
+    t=time.time()
+    img_pack = video_service.getImageRemote(video_client)
+    assert img_pack is not None
+    img = np.array(Image.frombytes("RGB",(img_pack[0],img_pack[1]),bytes(img_pack[6])))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    if time_est:
+        print('Photo received for '+str(time.time()-t))
+        cv2.imwrite ("img" + str (photo_ind) + ".jpg", img)
+    return img
+def finish(postureProxy, video_service,video_client):
+    time.sleep(1.0)
+    print('finished')
+    video_service.unsubscribe(video_client)
 
-#def turn_needed (marker_coords):
-#    if (marker_coords [0] < WIND_X / 2 - MAX_ACCEPTABLE_EXCENTRICITY):
-#	return Turns.LEFT
-	    
-#    elif (marker_coords [0] < WIND_X / 2 + MAX_ACCEPTABLE_EXCENTRICITY):
-#	return Turns.RIGHT
-
-#    return Turns.NOTURN
-
-#SHIFT_FROM_BOTTOM = 40
-
-#def walk_back (marker_coords):
-#    if (marker_coords [1] >= WIND_X - SHIFT_FROM_BOTTOM):
-#	return True
-
-#    return False
-
-def main(robotIP):
+def main(robotIP, time_lag = 2, stand_speed= 0.5):
     # Init proxies.
-    try:
-        motionProxy = ALProxy("ALMotion", robotIP, 9559)
-    except Exception, e:
-        print "Could not create proxy to ALMotion"
-        print "Error was: ", e
-
-    try:
-        postureProxy = ALProxy("ALRobotPosture", robotIP, 9559)
-    except Exception, e:
-        print "Could not create proxy to ALRobotPosture"
-        print "Error was: ", e
-
-    # Set NAO in Stiffness On
+    motionProxy, customProxy, postureProxy, video_service = make_proxies(robotIP,9559,False)
+    
     StiffnessOn(motionProxy)
-
-    # Send NAO to Pose Init
-    postureProxy.goToPosture("StandInit", 0.5)
-
-    #####################
-    ## Enable arms control by Walk algorithm
-    #####################
-    motionProxy.setWalkArmsEnabled(True, True)
-    #~ motionProxy.setWalkArmsEnabled(False, False)
-
-    #####################
-    ## FOOT CONTACT PROTECTION
-    #####################
-    #~ motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", False]])
     motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True]])
-
-    #TARGET VELOCITY
-    #X = -0.5  #backward
-    #Y = 0.0
-    #Theta = 0.0
-    Frequency =0.0 # low speed
-    #motionProxy.setWalkTargetVelocity(X, Y, Theta, Frequency)
-
-    #time.sleep(4.0)
+    postureProxy.goToPosture("StandInit", stand_speed)
     
-    ###########################################
-
-    #чтобы работал поворот
-    tts = ALProxy("MovementGraph", "192.168.1.67", 9559)
-
-    session = qi.Session()
-    try:
-        session.connect("tcp://" + "127.0.0.1" + ":" + "9559")
-
-    except RuntimeError:
-        print ("Can't connect to Naoqi at ip \"" + args.ip + "\" on port " + str(args.port) +".\n"
-               "Please check your script arguments. Run with -h option for help.")
-        sys.exit(1)
-    
-	#main(session)
-
-    video_service = session.service("ALVideoDevice")
-
-    #resolution = vision_definitions.kQQVGA
-    #colorSpace = vision_definitions.kYUVColorSpace
-    
-    resolution = 2
-    colorSpace = 11
-    
-    fps = 20
-    
-    nameId = video_service.subscribe("python_GVM", resolution, colorSpace, fps)
-    
-    #max_times = 20
-    max_times = 5
-    
-    walk      = False
-    walk_back = False
-
+    video_client = subscribe(video_service, 0)
+    prev_time = 0
+    n_times = 5    
     print ("starting")
-
-    for times in range (0, max_times):
-	print (str (times) + " turn")	
-
-	time_start = time.time ()
-	img_pack = video_service.getImageRemote(nameId)
-	print ("getImageRemote time: " + str (time.time () - time_start))
-
-	time.sleep(0.05)
-	    
-	img_ = Image.frombytes("RGB", (img_pack [0], img_pack [1]), bytes(img_pack [6]))
-	
-	img = np.array (img_)	
-	img = cv2.cvtColor (img, cv2.COLOR_BGR2RGB)
-
-	marker_coords = find_marker (img, (marker_color_min, marker_color_max))	
-
-	cv2.imwrite ("img" + str (times) + ".jpg", img)
-	
-	if (marker_coords [0] >= 0):
-	    print ("marker detected")
-	    walk = True
-
-	    if (marker_coords [1] >= 440):
-		walk_back = True
-
-	    if (marker_coords [0] < 280):
-		tts.Move (0, 0, 20)
-	    
-	    elif (marker_coords [0] > 360):
-		tts.Move (0, 0, -20)
-
-	else:
-	    print ("no marker")
-	    walk = False
-
-	if (walk == True):
-	    if (walk_back == False):
-		print ("walking straight")
-
-		X = 0.8
-		Y = 0.0
-		Theta = 0.0
-		Frequency =1.0 # max speed
-		motionProxy.setWalkTargetVelocity(X, Y, Theta, Frequency)
-	    
-#	    else:
-	if (walk_back == True):
-		print ("walking back")
-
-		X = -0.5  #backward
-		Y = 0.0
-		Theta = 0.0
-		Frequency =0.0 # low speed
-		motionProxy.setWalkTargetVelocity(X, Y, Theta, Frequency)
-
-	time.sleep (2.0)
-	
-    X = 0.0
-    Y = 0.0
-    Theta = 0.0
-    motionProxy.setWalkTargetVelocity(X, Y, Theta, Frequency)
-	
-    time.sleep (1.0)
-
-    print ("finished")
-
-    postureProxy.goToPosture("StandInit", 0.5)
-
-    video_service.unsubscribe(nameId)
+    for i in range(len(n_times)):
+        this_time = time.time()
+        if this_time>prev_time+time_lag:
+            img = get_photo(video_service, video_client, photo_ind=i)
+            prev_time = time.time()
+        turn_command = ShouldTurn(img, allowed_gamma = 100)
+        GetNewAngle(customProxy, turn_command)
+        if STOP_FLAG:
+            motionProxy.setWalkTargetVelocity(0,0,0,0)
+        elif TURNBACK_FLAG:
+            motionProxy.setWalkTargetVelocity(-0.5,0,0,1)
+        else:
+            motionProxy.setWalkTargetVelocity(0.8,0,0,1)
+    motionProxy.unsubscribe(postureProxy,video_service, video_client)
 
 if __name__ == "__main__":
     robotIp = "127.0.0.1"
 
     if len(sys.argv) <= 1:
-        print "Usage python motion_walk.py robotIP (optional default: 127.0.0.1)"
+        print ("Usage python motion_walk.py robotIP (optional default: 127.0.0.1)")
     else:
         robotIp = sys.argv[1]
 
