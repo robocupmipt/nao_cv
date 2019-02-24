@@ -34,9 +34,9 @@ def processLines(raw_lines, X_checkpoint=X_DIM/2,Y_checkpoint=Y_DIM/2):
         cond2 = (line.k<smallest_k/n)
         return cond1 or cond2
     def canBeHorisontal(line):
-        return not(canBeLeft(line) and canBeRight(line))
+        return not canBeLeft(line) and  not canBeRight(line)
     for line in raw_lines:
-        if (canBeLeft(line) if line.xmax>left_xmax):
+        if (canBeLeft(line) and line.xmax>left_xmax):
             left_line,left_xmax=line,  line.xmax
         elif (canBeRight(line) and line.xmin<right_xmin):
             right_line,right_xmin = line, line.xmin
