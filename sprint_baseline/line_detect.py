@@ -110,7 +110,7 @@ def getLines (img):
     lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
                         min_line_length, max_line_gap)
     answer=[]
-    if len(lines)>0:
+    if lines is not None:
         for line in lines:
             print(line)
             print(line.shape)
