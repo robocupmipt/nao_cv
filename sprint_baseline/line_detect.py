@@ -110,13 +110,14 @@ def getLines (img):
     lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
                         min_line_length, max_line_gap)
     answer=[]
-    for line in lines:
-        print(line)
-        print(line.shape)
-        x1,y1,x2,y2=line[0]
-        k=(y2-y1)/(x2+0.0-x1)#to be float
-        b=(y1*x2-x1*y2)/(x2+0.0-x1)#to be float
-        x_min=min(x1,x2)
-        x_max=max(x1,x2)
-        answer.append(Line(k,b,x_min,x_max))
+    if len(lines)>0:
+        for line in lines:
+            print(line)
+            print(line.shape)
+            x1,y1,x2,y2=line[0]
+            k=(y2-y1)/(x2+0.0-x1)#to be float
+            b=(y1*x2-x1*y2)/(x2+0.0-x1)#to be float
+            x_min=min(x1,x2)
+            x_max=max(x1,x2)
+            answer.append(Line(k,b,x_min,x_max))
     return answer
