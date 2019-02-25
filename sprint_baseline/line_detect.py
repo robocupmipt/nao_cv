@@ -86,6 +86,37 @@ def erase_little_parts (mask, area_th, hei_th, wid_th):
             stats [label_num, cv2.CC_STAT_HEIGHT] < hei_th):
             result [labels == label_num] = 0 
     return result
+def are_close(lines1,lines2, max_closedist=10):
+    '''
+    Чтобы сэкономить время, мы измеряем только расстояние по оси y при том же самом x
+    delta = x*(k1-k2)+(b1-b2)
+    ищем min(abs(delta)) при x=min_x, x=max_x 
+    или если delta= 0 при x между [min_x,max_x], То возвращаем 0
+    '''
+    min_x = max(lines1.xmin,lines2.xmin)
+    max_x = min(lines1.xmax,lines2.xmax)
+    k1 = lines1.k-lines2.k
+    b1=lines1.b-lines2.b
+    if min_x>max_x:
+        return False
+    close_delta1 = min(k1*min_x+b1, k1*max_x+b1)
+    delta_zerox = (lines2.b-lines1.b)/(lines1.k-lines2.k)
+    if ((delta_zerox > min_x and delta_zerox<max_x) or (close_delta1<max_closedist)):
+        return True
+    return False
+        
+def line_filter(lines):
+    lines = sorted(lines, key = lambda z: z.xmin -z.xmax)
+    to_delete=[]
+    for i in range(len(lines)):
+        for j in range(i+1,len(lines)):
+            if (j not in to_delete
+                and are_close(lines[i],lines[j])):
+                to_delete.append(j)
+    to_delete=sorted(to_delete)            
+    for ind in to_delete[::-1]:
+        del lines[ind]
+    return lines
 
 def getLines (img):
     
@@ -120,36 +151,5 @@ def getLines (img):
             x_min=min(x1,x2)
             x_max=max(x1,x2)
             answer.append(Line(k,b,x_min,x_max))
+        answer = line_filter(answer)
     return answer
-def are_close(lines1,lines2, max_closedist=10):
-    pass
-    '''
-    Чтобы сэкономить время, мы измеряем только расстояние по оси y при том же самом x
-    delta = x*(k1-k2)+(b1-b2)
-    ищем min(abs(delta)) при x=min_x, x=max_x 
-    или если delta= 0 при x между [min_x,max_x], То возвращаем 0
-    '''
-    min_x = max(lines1.xmin,lines2.xmin)
-    max_x = min(lines1.xmax,lines2.xmax)
-    k1 = lines1.k-lines2.k
-    b1=lines1.b-lines2.b
-    if min_x>max_x:
-        return False
-    close_delta1 = min(k1*min_x+b1, k1*max_x+b1)
-    delta_zerox = (lines2.b-lines1.b)/(lines1.k-lines2.k)
-    if ((delta_zerox > min_x and delta_zerox<max_x) or (close_delta1<max_closedist)):
-        return True
-    return False
-        
-def line_filter(lines):
-    lines = sorted(lines, key = lambda z: z.xmin -z.xmax)
-    to_delete=[]
-    for i in range(len(lines)):
-        for j in range(i+1,len(lines)):
-            if (j not in to_delete
-                and are_close(lines[i],lines[j])):
-                to_delete.append(j)
-    to_delete=sorted(to_delete)            
-    for ind in to_delete[::-1]:
-        del lines[ind]
-    return lines
