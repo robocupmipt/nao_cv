@@ -100,8 +100,7 @@ def are_close(lines1,lines2, max_closedist=10):
     if min_x>max_x:
         return False
     close_delta1 = min(k1*min_x+b1, k1*max_x+b1)
-    delta_zerox = (lines2.b-lines1.b)/(lines1.k-lines2.k)
-    if ((delta_zerox > min_x and delta_zerox<max_x) or (close_delta1<max_closedist)):
+    if ((close_delta1<max_closedist)):
         return True
     return False
         
