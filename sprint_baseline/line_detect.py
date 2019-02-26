@@ -120,7 +120,8 @@ def line_filter(lines):
 def getLines (img):
     
     field, f_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 61, use_rg = False)
-    field2, f2_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 5, use_rg = False)
+    #field2, f2_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 5, use_rg = False)
+    field2, f2_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 1, use_rg = False)
     f2_mask_inv = cv2.bitwise_not (f2_mask)
     field_cut = cv2.bitwise_and (field, field, mask = f2_mask_inv)  
     field_cut_resized = cv2.resize (field_cut, (X_DIM,Y_DIM))       
