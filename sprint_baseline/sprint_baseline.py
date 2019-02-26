@@ -212,7 +212,10 @@ def main(robotIP, time_lag = 2, stand_speed= 0.5):
         raise Exception()
     motionProxy, customProxy, postureProxy, video_service = proxy_list
     StiffnessOn(motionProxy)
-    motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True]])
+    motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True],
+                                ['MaxStepX',0.06],['StepHeight',0.027],
+                                 ['TorsoWy',0.01]])
+    motionProxy.setMoveArmsEnabled(true,true)
     postureProxy.goToPosture("StandInit", stand_speed)
 
     
