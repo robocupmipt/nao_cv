@@ -42,11 +42,13 @@ while True:
    print('Нажмите 0 для выхода, иное число для съема ')
    get_photo(ss)
    ss+=1
-
+ 
 from line_detection import getLines
-from sprint_baseline import processLines
-def log(image, lines,other_lines, image_name, thickness=1):
+from sprint_baseline import processLines, getObjectCentre
+def log(image, lines,other_lines, center, image_name, thickness=1, circle_range=10):
     colors=[(255,0,0),(0,255,0),(0,0,255)]
+    if center[0]>0:
+         cv2.circle(image, center, circle_range, colors[1])
     for line in other_lines:
         cv2.line(image,
             (line.xmin,line.y(line.xmin)),
@@ -62,6 +64,7 @@ for image_name in os.listdir(os.getcwd()) :
         image = cv2.imread(image_name)
         other_lines = getLines(image)
         lines = processLines(other_lines)
-        log(image,lines,other_lines,image_name)
-
+        center = getObjectCentre(image,mode='redbox')
+        log(image,lines,other_lines,center, image_name)
+ 
 print('Все')
