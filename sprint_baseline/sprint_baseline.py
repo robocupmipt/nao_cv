@@ -196,7 +196,7 @@ def finish(postureProxy, video_service,video_client):
     print('finished')
     video_service.unsubscribe(video_client)
 time_lag,stand_speed=2,0.5
-robotIP='192.168.1.67'
+robotIP='192.168.1.4'
 def main(robotIP, time_lag = 2, stand_speed= 0.5):
     # Init proxies.
     #motionProxy, customProxy, postureProxy, video_service = make_proxies(robotIP,9559,False)
@@ -238,7 +238,35 @@ def main(robotIP, time_lag = 2, stand_speed= 0.5):
         else:
             motionProxy.setWalkTargetVelocity(0.8,0,0,1)
     motionProxy.unsubscribe(postureProxy,video_service, video_client)
-
+#def TurnCriteria(photo):
+#    center = getObjectCentre(image,'redbox')
+    
+def mainBlind(robotIP, useLightCriteria=False):
+    proxy_list=[]
+    walk_dist=1
+    proxy_names,port=['MovementGraph','ALRobotPosture','AlVideoDevice'],9559
+    sess = qi.Session()
+    try:
+        sess.connect("tcp://"+robotIP+":"+str(port))
+        for proxy_name in proxy_names:
+            proxy_list.append(sess.service(proxy_name))
+    except:
+        print('Can not connect at ip '+robotIP+' and port '+str(port))
+        raise Exception()
+    customProxy, postureProxy,video_service = proxy_list
+    StiffnessOn(customProxy)
+    customProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True],
+                                ['MaxStepX',0.06],['StepHeight',0.027],
+                                 ['TorsoWy',0.01]])
+    customProxy.setMoveArmsEnabled(True,True)
+    postureProxy.goToPosture("StandInit", stand_speed)
+    print ("starting")
+    t=time.time()
+    customProxy.GoForvard(walk_dist)#walk walk_dist meters forward
+    print(time.time()-t)
+    customProxy.GoBack(walk_dist)
+    print(time.time()-t)
+    
 if __name__ == "__main__":
     robotIp = "127.0.0.1"
 
@@ -246,5 +274,5 @@ if __name__ == "__main__":
         print ("Usage python motion_walk.py robotIP (optional default: 127.0.0.1)")
     else:
         robotIp = sys.argv[1]
-
-    main(robotIp)
+    #mainBlind(robotIp)
+    mainBlind(robotIp)
