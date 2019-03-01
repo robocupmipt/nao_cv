@@ -1,7 +1,16 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Mar  1 09:08:19 2019
+
+@author: robocup
+"""
+
 import qi
 from PIL import Image
 import cv2
 import os
+os.chdir('/home/robocup/nao')
 IP='192.168.1.13'
 PORT=9559
 resolution = 2
@@ -43,13 +52,12 @@ while True:
    print('Нажмите 0 для выхода, иное число для съема ')
    get_photo(ss)
    ss+=1
- 
-from line_detection import getLines
+from line_detect import getLines
 from sprint_baseline import processLines, getObjectCentre
-def log(image, lines,other_lines, center, image_name, thickness=1, circle_range=10):
+def log(image, lines,other_lines, center, image_name, thickness=1,circle_range=10):
     colors=[(255,0,0),(0,255,0),(0,0,255)]
     if center[0]>0:
-         cv2.circle(image, center, circle_range, colors[1])
+         cv2.circle(image, center, circle_range, (0,255,255))
     for line in other_lines:
         cv2.line(image,
             (line.xmin,line.y(line.xmin)),
@@ -60,16 +68,19 @@ def log(image, lines,other_lines, center, image_name, thickness=1, circle_range=
             (line.xmin,line.y(line.xmin)),
             (line.xmax,line.y(line.xmax)),color,thickness)         
     cv2.imwrite(''+image_name+'EDITED.jpg',image)
-condition0=('.jpg' in image_name and 'IMAGE' in image_name)#photos made in Moscow
-condition1=('.jpg' in image_name and 'cam' in image_name)#photos made here
+
 for image_name in os.listdir(os.getcwd()) :
+    condition0=('.jpg' in image_name and (
+    'IMAGE' in image_name or 'buggy' in image_name) and 'EDITED' not in image_name)#photos made in Moscow
+    condition1=('.jpg' in image_name and 'cam' in image_name)#photos made here
     if condition0:
         image = cv2.imread(image_name)
+        image1 = cv2.resize(image,(480,360))
         other_lines = getLines(image)
         lines = processLines(other_lines)
         center = getObjectCentre(image,mode='redbox')
-        log(image,lines,other_lines,center, image_name)
- walk_dist=1#meters
+        log(image,lines,other_lines,tuple(center), image_name)
+walk_dist=1#meters
 n_times=3#times
 
 print('Все, дальше тестируем ходьбу - введите что угодно и поставьте робота так чтобы он мог пройти '+str(walk_dist*n_times)+' метров вперед')
@@ -101,5 +112,3 @@ for i in range(2):
              used_proxy.()#walk walk_dist meters backward
              dir_='backward'
         print('Walking for '+str(walk_dist)+' m '+str(dir)+' took '+str(time.time()-t)+' sec')
-
-

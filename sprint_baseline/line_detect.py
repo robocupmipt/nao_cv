@@ -13,7 +13,25 @@ class Line():
         self.ymin,self.ymax = int(min(y_extrs)),int(max(y_extrs))
     def y(self,x, type_=int):
         return type_(self.k*x+self.b)
+
+def turn_to_RG (img):
+    (h, w, d) = img.shape
     
+    norm = np.zeros ((h, w), np.float)
+    norm = img [:, :, 0].astype ('float') +\
+           img [:, :, 1].astype ('float') +\
+           img [:, :, 2].astype ('float')
+    
+    norm [norm == 0] = 5
+    
+    turned = np.zeros (img.shape, np.uint8)
+    turned [:, :, 0] = ((img [:, :, 0].astype ('float')) / norm * 255).astype ('uint8')
+    turned [:, :, 1] = ((img [:, :, 1].astype ('float')) / norm * 255).astype ('uint8')
+    turned [:, :, 2] = ((img [:, :, 2].astype ('float')) / norm * 255).astype ('uint8')
+    
+    return turned    
+
+"""
 def turn_to_RG (img):
     (h, w, d) = img.shape
     
@@ -22,7 +40,6 @@ def turn_to_RG (img):
     turned = ((img.sum(2)/norm)*255).astype('uint8')    
     return turned
 
-"""
 def obtain_color_ratio_mask (img, components=(60,180,10), th=170, bl=61, use_rg =True):
     sh = img [:, :, 0].shape 
     if use_rg==False:
@@ -47,7 +64,7 @@ def obtain_color_ratio_mask (img, components=(60,180,10), th=170, bl=61, use_rg 
     #return diff
 """
 
-def obtain_color_ratio_mask (img, components, th, bl, use_rg = False):
+def obtain_color_ratio_mask (img, components, th, bl, use_rg = True):
     sh = img [:, :, 0].shape
     
     rg = img
@@ -56,12 +73,13 @@ def obtain_color_ratio_mask (img, components, th, bl, use_rg = False):
         rg = turn_to_RG (img)
     
     smoothed = cv2.blur (rg, (bl, bl))
-    
+    if use_rg:
+        assert len(smoothed.shape)==3
     needed = img.copy ()
     needed [:, :, 0] = np.full (sh, components [0])
     needed [:, :, 1] = np.full (sh, components [1])
     needed [:, :, 2] = np.full (sh, components [2])
-    
+    needed = needed.astype('uint8')
     diff = cv2.absdiff (smoothed, needed)
     
     dif = diff [:, :, 0] + diff [:, :, 1] + diff [:, :, 2]
@@ -118,15 +136,18 @@ def line_filter(lines):
         del lines[ind]
     return lines
 
-def getLines (img):
+def getLines (img, edit_shape=(480,360)):
+    #init_shape=img.shape
+    #img = cv2.resize(img,edit_shape)
     
-    field, f_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 61, use_rg = False)
+    field, f_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 61, use_rg = True)
     #field2, f2_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 5, use_rg = False)
-    field2, f2_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 1, use_rg = False)
+    field2, f2_mask = obtain_color_ratio_mask (img, (60, 180, 10), 170, 1, use_rg =True)
     f2_mask_inv = cv2.bitwise_not (f2_mask)
     field_cut = cv2.bitwise_and (field, field, mask = f2_mask_inv)  
     field_cut_resized = cv2.resize (field_cut, (X_DIM,Y_DIM))       
-    gray = cv2.cvtColor(field_cut_resized,cv2.COLOR_BGR2GRAY)#I use only field_cut_resized
+    gray = cv2.cvtColor(field_cut_resized.astype('uint8')
+    ,cv2.COLOR_BGR2GRAY)#I use only field_cut_resized
     kernel_size = 5
     blur_gray = cv2.GaussianBlur(gray,(kernel_size, kernel_size),0)
     low_threshold = 50
@@ -142,6 +163,7 @@ def getLines (img):
     lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
                         min_line_length, max_line_gap)
     answer=[]
+    print(len(answer))
     if lines is not None:
         for line in lines:
             print(line)
@@ -152,5 +174,5 @@ def getLines (img):
             x_min=min(x1,x2)
             x_max=max(x1,x2)
             answer.append(Line(k,b,x_min,x_max))
-        answer = line_filter(answer)
+        #answer = line_filter(answer)
     return answer
