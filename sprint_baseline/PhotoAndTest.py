@@ -12,6 +12,7 @@ ses.connect(IP)
 YAW,PITCH=0,0
 video= ses.service('ALVideoDevice')
 motionProxy  = ses.service('ALMotion')
+customMotionProxy = ses.service('MovementGraph')
 postureProxy = ses.service('ALRobotPosture')
 videoClient0 = video.subscribeCamera(
         "python_client", 0, resolution, colorSpace, 5)
@@ -68,5 +69,37 @@ for image_name in os.listdir(os.getcwd()) :
         lines = processLines(other_lines)
         center = getObjectCentre(image,mode='redbox')
         log(image,lines,other_lines,center, image_name)
- 
-print('Все')
+ walk_dist=1#meters
+n_times=3#times
+
+print('Все, дальше тестируем ходьбу - введите что угодно и поставьте робота так чтобы он мог пройти '+str(walk_dist*n_times)+' метров вперед')
+z=input()
+
+def prepare(motionProxy, postureProxy, stand_speed=0.5):
+      #Подготовка прокси к движению
+      StiffnessOn(motionProxy) 
+      motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True], 
+      ['MaxStepX',0.06],['StepHeight',0.027], ['TorsoWy',0.01]]) 
+      motionProxy.setMoveArmsEnabled(true,true) 
+      postureProxy.goToPosture("StandInit", stand_speed)
+USE_CUSTOMPROXY=True#юзаем свое
+if USE_CUSTOMPROXY:
+    used_proxy=customMotionProxy
+else:
+    used_proxy=motionProxy
+
+prepare(used_proxy, motionProxy)
+
+#Начинаем тестирование
+for i in range(2):
+    for k in range(n_times):
+        t=time.time()
+        if i>0:
+             used_proxy.()#walk walk_dist meters forward
+             dir_='forward'
+        else:
+             used_proxy.()#walk walk_dist meters backward
+             dir_='backward'
+        print('Walking for '+str(walk_dist)+' m '+str(dir)+' took '+str(time.time()-t)+' sec')
+
+
