@@ -59,8 +59,10 @@ def log(image, lines,other_lines, center, image_name, thickness=1, circle_range=
             (line.xmin,line.y(line.xmin)),
             (line.xmax,line.y(line.xmax)),color,thickness)         
     cv2.imwrite(''+image_name+'EDITED.jpg',image)
+condition0=('.jpg' in image_name and 'IMAGE' in image_name)#photos made in Moscow
+condition1=('.jpg' in image_name and 'cam' in image_name)#photos made here
 for image_name in os.listdir(os.getcwd()) :
-    if '.jpg' in image_name and 'cam' in image_name:
+    if condition0:
         image = cv2.imread(image_name)
         other_lines = getLines(image)
         lines = processLines(other_lines)
