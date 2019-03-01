@@ -11,10 +11,11 @@ import numpy as np
 from PIL import Image
 TURNBACK_FLAG=False
 STOP_FLAG = False
+PREVIOUS_TURN=999
 #from enum import Enum
 #img image rename
-marker_color_min = (0, 240, 135)#Min color of red box
-marker_color_max = (20, 255, 205)#Max color of red box
+marker_color_min = (0, 220, 65)#Min color of red box#(90,135)
+marker_color_max = (20, 250, 105)#Max color of red box
 pattern_size = (3,3)#Pattern size of chessboard
 
 from line_detect import getLines,Line,X_DIM,Y_DIM
@@ -82,7 +83,11 @@ def getRedboxCentre (image, color = (
         x = int(dM10 / dArea)
         y = int(dM01 / dArea)
         marker_coord[0] = x
-        marker_coord[1] = y    
+        marker_coord[1] = y
+        print('COORDINATES FOUND')
+        print(str(marker_coord))
+    else:
+        print('COORDINATES NOT FOUND')
     return marker_coord
 
 def getObjectCentre(image,mode='chessboard'):
@@ -97,12 +102,22 @@ def getObjectCentre(image,mode='chessboard'):
         raise Exception('Unknown mode '+str(mode))
                
 
-def ObjectCondition(center_y, allowed_gamma=100):
-    if center_y < Y_DIM/2 - allowed_gamma:
+def ObjectCondition(center_x, allowed_gamma=100):
+    global PREVIOUS_TURN
+    print('Center_X is'+str(center_x))
+    if center_x<0:
+        return PREVIOUS_TURN
+    if center_x < X_DIM/2 - allowed_gamma:
+        print('To turn left')
+        PREVIOUS_TURN=-1
         return -1
-    elif center_y>Y_DIM/2 + allowed_gamma:
+    elif center_x>X_DIM/2 + allowed_gamma:
+        print('To turn right')
+        PREVIOUS_TURN=1
         return 1
     else:
+        PREVIOUS_TURN=0
+        print('Not to turn')
         return 0
 def LineCondition(left_line, right_line):
      if left_line is None and right_line is not None:
@@ -116,21 +131,25 @@ def BackCondition(line, center):
         return 1
     return 0
 def ShouldTurn(image, allowed_gamma=100, X_checkpoint=X_DIM//2,Y_checkpoint=Y_DIM//2,
-               log_lines= True):
+               log_lines= True, use_lines=False):
     global TURNBACK_FLAG
-    raw_lines = getLines(image)#list of objects class Line
-    left_line,right_line,horisontal_line = processLines(raw_lines, X_checkpoint,Y_checkpoint)
-    if log_lines:
-        log(image,[left_line,right_line,horisontal_line])
-    center = getChessboardCentre(image)#maybe other function and other object instead of chessboard
-    back_condition = BackCondition(horisontal_line,center)
-    line_condition = LineCondition(left_line,right_line)
-    object_condition = ObjectCondition(center[1],allowed_gamma)
-    if back_condition:
-        TURNBACK_FLAG=True
-    if abs(object_condition)>1:
+    if use_lines:
+        raw_lines = getLines(image)#list of objects class Line
+        left_line,right_line,horisontal_line = processLines(raw_lines, X_checkpoint,Y_checkpoint)
+        if log_lines:
+            log(image,[left_line,right_line,horisontal_line])
+        center = getChessboardCentre(image)#maybe other function and other object instead of chessboard
+        back_condition = BackCondition(horisontal_line,center)
+        line_condition = LineCondition(left_line,right_line)
+        if back_condition:
+            TURNBACK_FLAG=True
+    else:
+        line_condition=0
+    center = getObjectCentre(image,'redbox')
+    object_condition = ObjectCondition(center[0],allowed_gamma)
+    if abs(object_condition)>0:
          return object_condition
-    if abs(line_condition)>1:
+    if abs(line_condition)>0:
          return line_condition
     return 0
 
@@ -196,76 +215,58 @@ def finish(postureProxy, video_service,video_client):
     print('finished')
     video_service.unsubscribe(video_client)
 time_lag,stand_speed=2,0.5
-robotIP='192.168.1.4'
-def main(robotIP, time_lag = 2, stand_speed= 0.5):
-    # Init proxies.
-    #motionProxy, customProxy, postureProxy, video_service = make_proxies(robotIP,9559,False)
-    proxy_list=[]
-    proxy_names,port=['ALMotion','MovementGraph','ALRobotPosture',
-                   'ALVideoDevice'],9559
-    sess = qi.Session()
-    try:
-        sess.connect("tcp://"+robotIP+":"+str(port))
-        for proxy_name in proxy_names:
-            proxy_list.append(sess.service(proxy_name))
-    except:
-        print('Can not connect at ip '+robotIP+' and port '+str(port))
-        raise Exception()
-    motionProxy, customProxy, postureProxy, video_service = proxy_list
-    StiffnessOn(motionProxy)
-    motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True],
-                                ['MaxStepX',0.06],['StepHeight',0.027],
-                                 ['TorsoWy',0.01]])
-    motionProxy.setMoveArmsEnabled(True,True)
-    postureProxy.goToPosture("StandInit", stand_speed)
+#robotIP='192.168.1.2'
 
-    
-    video_client = subscribe(video_service, 0)
-    prev_time = 0
-    n_times = 5    
-    print ("starting")
-    for i in range((n_times)):
-        this_time = time.time()
-        if this_time>prev_time+time_lag:
-            img = get_photo(video_service, video_client, photo_ind=i)
-            prev_time = time.time()
-        turn_command = ShouldTurn(img, allowed_gamma = 100,log_lines=True)
-        GetNewAngle(customProxy, turn_command)
-        if STOP_FLAG:
-            motionProxy.setWalkTargetVelocity(0,0,0,0)
-        elif TURNBACK_FLAG:
-            motionProxy.setWalkTargetVelocity(-0.5,0,0,1)
-        else:
-            motionProxy.setWalkTargetVelocity(0.8,0,0,1)
-    motionProxy.unsubscribe(postureProxy,video_service, video_client)
-#def TurnCriteria(photo):
-#    center = getObjectCentre(image,'redbox')
-    
+from tqdm import tqdm
+robotIP='192.168.43.252'
 def mainBlind(robotIP, useLightCriteria=False):
     proxy_list=[]
-    walk_dist=1
-    proxy_names,port=['MovementGraph','ALRobotPosture','AlVideoDevice'],9559
+    walk_dist=3
+    proxy_names,port=['ALMotion','MovementGraph','ALRobotPosture','ALVideoDevice','ALAutonomousLife'],9559
     sess = qi.Session()
     try:
         sess.connect("tcp://"+robotIP+":"+str(port))
-        for proxy_name in proxy_names:
+        for proxy_name in tqdm(proxy_names):
             proxy_list.append(sess.service(proxy_name))
     except:
         print('Can not connect at ip '+robotIP+' and port '+str(port))
         raise Exception()
-    customProxy, postureProxy,video_service = proxy_list
-    StiffnessOn(customProxy)
-    customProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True],
-                                ['MaxStepX',0.06],['StepHeight',0.027],
-                                 ['TorsoWy',0.01]])
-    customProxy.setMoveArmsEnabled(True,True)
-    postureProxy.goToPosture("StandInit", stand_speed)
+    motionProxy,customProxy, postureProxy,video_service,AutonomousLifeProxy = proxy_list
+    AutonomousLifeProxy.setState("disabled")
+    video_client = subscribe(video_service,0)
+#    StiffnessOn(motionProxy)
+#    motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True],
+#                                ['MaxStepX',0.06],['StepHeight',0.027],
+#                                 ['TorsoWy',0.01]])
+#    motionProxy.setMoveArmsEnabled(True,True)
+#    postureProxy.goToPosture("StandInit", stand_speed)
+    postureProxy.goToPosture("StandInit", 0.6)
     print ("starting")
     t=time.time()
-    customProxy.GoForvard(walk_dist)#walk walk_dist meters forward
-    print(time.time()-t)
-    customProxy.GoBack(walk_dist)
-    print(time.time()-t)
+    DEFAULT_SPEED=0.10
+    walk_dist=3
+    walk_time = walk_dist/DEFAULT_SPEED
+    n_chunks=10
+    rotate_theta=6.6
+    time_chunk = walk_time/(n_chunks+0.0)
+    customProxy.StartMove()
+    for i in range(n_chunks):
+        customProxy.GoForvard(walk_dist)#walk walk_dist meters forward
+        time.sleep(time_chunk)
+        motionProxy.setAngles(["HeadPitch","HeadYaw"],[0,0],0.3)
+        img_pack = video_service.getImageRemote(video_client)
+        assert img_pack is not None
+        img = np.array(Image.frombytes("RGB",(img_pack[0],img_pack[1]),bytes(img_pack[6])))
+        image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        cv2.imwrite('PHOTO_'+str(i)+'.jpg',image)
+        turn_flag = ShouldTurn(image, allowed_gamma=100)
+        if turn_flag:
+            print('Turning')
+            motionProxy.moveTo(0,0,rotate_theta*turn_flag*np.pi/180)
+        #Turn on angle
+        customProxy.StopMove()
+    postureProxy.goToPosture("StandInit", 0.6)
+
     
 if __name__ == "__main__":
     robotIp = "127.0.0.1"
@@ -276,3 +277,47 @@ if __name__ == "__main__":
         robotIp = sys.argv[1]
     #mainBlind(robotIp)
     mainBlind(robotIp)
+#OLDER FUNCTION
+#def main(robotIP, time_lag = 2, stand_speed= 0.5):
+#    # Init proxies.
+#    #motionProxy, customProxy, postureProxy, video_service = make_proxies(robotIP,9559,False)
+#    proxy_list=[]
+#    proxy_names,port=['ALMotion','MovementGraph','ALRobotPosture',
+#                   'ALVideoDevice'],9559
+#    sess = qi.Session()
+#    try:
+#        sess.connect("tcp://"+robotIP+":"+str(port))
+#        for proxy_name in proxy_names:
+#            proxy_list.append(sess.service(proxy_name))
+#    except:
+#        print('Can not connect at ip '+robotIP+' and port '+str(port))
+#        raise Exception()
+#    motionProxy, customProxy, postureProxy, video_service = proxy_list
+#    StiffnessOn(motionProxy)
+#    motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True],
+#                                ['MaxStepX',0.06],['StepHeight',0.027],
+#                                 ['TorsoWy',0.01]])
+#    motionProxy.setMoveArmsEnabled(True,True)
+#    postureProxy.goToPosture("StandInit", stand_speed)
+#
+#    
+#    video_client = subscribe(video_service, 0)
+#    prev_time = 0
+#    n_times = 5    
+#    print ("starting")
+#    for i in range((n_times)):
+#        this_time = time.time()
+#        if this_time>prev_time+time_lag:
+#            img = get_photo(video_service, video_client, photo_ind=i)
+#            prev_time = time.time()
+#        turn_command = ShouldTurn(img, allowed_gamma = 100,log_lines=True)
+#        GetNewAngle(customProxy, turn_command)
+#        if STOP_FLAG:
+#            motionProxy.setWalkTargetVelocity(0,0,0,0)
+#        elif TURNBACK_FLAG:
+#            motionProxy.setWalkTargetVelocity(-0.5,0,0,1)
+#        else:
+#            motionProxy.setWalkTargetVelocity(0.8,0,0,1)
+#    motionProxy.unsubscribe(postureProxy,video_service, video_client)
+##def TurnCriteria(photo):
+#    center = getObjectCentre(image,'redbox')
