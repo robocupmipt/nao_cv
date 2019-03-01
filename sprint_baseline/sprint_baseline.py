@@ -1,4 +1,5 @@
-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import sys
 import time
 import qi
@@ -215,7 +216,7 @@ def main(robotIP, time_lag = 2, stand_speed= 0.5):
     motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True],
                                 ['MaxStepX',0.06],['StepHeight',0.027],
                                  ['TorsoWy',0.01]])
-    motionProxy.setMoveArmsEnabled(true,true)
+    motionProxy.setMoveArmsEnabled(True,True)
     postureProxy.goToPosture("StandInit", stand_speed)
 
     
