@@ -9,13 +9,15 @@ import time
 import cv2
 import numpy as np
 from PIL import Image
+import os
+#os.chdir('/home/robocup/nao')
 TURNBACK_FLAG=False
 STOP_FLAG = False
-PREVIOUS_TURN=999
+PREVIOUS_TURN=0
 #from enum import Enum
 #img image rename
-marker_color_min = (0, 220, 65)#Min color of red box#(90,135)
-marker_color_max = (20, 250, 105)#Max color of red box
+marker_color_min = (0, 220, 90)#Min color of red box#(60,105)
+marker_color_max = (20, 250, 135)#Max color of red box
 pattern_size = (3,3)#Pattern size of chessboard
 
 from line_detect import getLines,Line,X_DIM,Y_DIM
@@ -169,28 +171,6 @@ def StiffnessOn(proxy):
     proxy.stiffnessInterpolation(pNames, pStiffnessLists, pTimeLists)
 
 
-def make_proxies(robotIP,port=9559, session=False):
-    '''
-    if session is False, ALProxys are created. 
-    Otherwise, connections through qi.Session are created.
-    '''
-    proxy_names = ['ALMotion','MovementGraph','ALRobotPosture',
-                   'ALVideoDevice']
-    proxy_list=[]
-    if not session:
-        from naoqi import ALProxy
-        for proxy_name in proxy_names:
-            try:
-                proxy_list.append(
-                ALProxy(proxy_name, robotIP,port))
-            except Exception as e:
-                print('Could not create proxy to '+proxy_name)
-                print('Error was: '+str(e))
-                raise Exception()
-    elif session:
-        return None
-            
-    return proxy_list
 def subscribe(video_service, camera_id=0,
               resolution=2, colorSpace=11,fps=5):
     ###Subscribes videoservice to camera
@@ -214,71 +194,51 @@ def finish(postureProxy, video_service,video_client):
     time.sleep(1.0)
     print('finished')
     video_service.unsubscribe(video_client)
-time_lag,stand_speed=2,0.5
+time_lag,stand_speed=2,0.6
 #robotIP='192.168.1.2'
 
-from tqdm import tqdm
-robotIP='192.168.43.252'
-def mainBlind(robotIP, useLightCriteria=False):
-    proxy_list=[]
-    walk_dist=3
-    proxy_names,port=['ALMotion','MovementGraph','ALRobotPosture','ALVideoDevice','ALAutonomousLife'],9559
-    sess = qi.Session()
-    try:
-        sess.connect("tcp://"+robotIP+":"+str(port))
-        for proxy_name in tqdm(proxy_names):
-            proxy_list.append(sess.service(proxy_name))
-    except:
-        print('Can not connect at ip '+robotIP+' and port '+str(port))
-        raise Exception()
-    motionProxy,customProxy, postureProxy,video_service,AutonomousLifeProxy = proxy_list
-    AutonomousLifeProxy.setState("disabled")
-    video_client = subscribe(video_service,0)
-#    StiffnessOn(motionProxy)
-#    motionProxy.setMotionConfig([["ENABLE_FOOT_CONTACT_PROTECTION", True],
-#                                ['MaxStepX',0.06],['StepHeight',0.027],
-#                                 ['TorsoWy',0.01]])
-#    motionProxy.setMoveArmsEnabled(True,True)
-#    postureProxy.goToPosture("StandInit", stand_speed)
+#from tqdm import tqdm
+
+robotIP='192.168.8.115'
+robotIP='192.168.1.12'
+disable_state=True#DISABLE BEHAVIOR IN SCRIPT
+make_photos=False#MAKE PHOTOS IN SCRIPT
+n_chunks=10#NUMBER OF CHUNKS AT THE END OF EACH STOPS TO MAKE PHOTO
+extra_lag=1.5
+expected_speed=0.06
+def mainBlind(robotIP, disable_state=disable_state,make_photos=make_photos, n_chunks=n_chunks,
+              speed=expected_speed,extra_lag=extra_lag):
+z
+    print('going back')
+    time.sleep(2)
+    time_chunk = time_chunk/2
     postureProxy.goToPosture("StandInit", 0.6)
-    print ("starting")
-    t=time.time()
-    DEFAULT_SPEED=0.10
-    walk_dist=3
-    walk_time = walk_dist/DEFAULT_SPEED
-    n_chunks=10
-    rotate_theta=6.6
-    time_chunk = walk_time/(n_chunks+0.0)
     customProxy.StartMove()
-    for i in range(n_chunks):
-        customProxy.GoForvard(walk_dist)#walk walk_dist meters forward
-        time.sleep(time_chunk)
-        motionProxy.setAngles(["HeadPitch","HeadYaw"],[0,0],0.3)
-        img_pack = video_service.getImageRemote(video_client)
-        assert img_pack is not None
-        img = np.array(Image.frombytes("RGB",(img_pack[0],img_pack[1]),bytes(img_pack[6])))
-        image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        cv2.imwrite('PHOTO_'+str(i)+'.jpg',image)
-        turn_flag = ShouldTurn(image, allowed_gamma=100)
-        if turn_flag:
-            print('Turning')
-            motionProxy.moveTo(0,0,rotate_theta*turn_flag*np.pi/180)
+    for i in (range(n_chunks)):
+        customProxy.GoBack(walk_dist)#walk walk_dist meters forward
+        time.sleep(time_chunk*back_ntimes_slower)
+        if make_photos:
+            motionProxy.setAngles(["HeadPitch","HeadYaw"],[0,0],0.3)
+            img_pack = video_service.getImageRemote(video_client)
+            assert img_pack is not None
+            img = np.array(Image.frombytes("RGB",(img_pack[0],img_pack[1]),bytes(img_pack[6])))
+            image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            cv2.imwrite('PHOTO_'+str(i)+'.jpg',image)
+            turn_flag = ShouldTurn(image, allowed_gamma=100)
+            if turn_flag:
+                print('Turning')
+                motionProxy.moveTo(0,0,rotate_theta*turn_flag*np.pi/180)
         #Turn on angle
         customProxy.StopMove()
-    postureProxy.goToPosture("StandInit", 0.6)
-
+        time.sleep(extra_lag)
+    postureProxy.goToPosture("StandInit", 0.6) 
     
 if __name__ == "__main__":
-    robotIp = "127.0.0.1"
-
-    if len(sys.argv) <= 1:
-        print ("Usage python motion_walk.py robotIP (optional default: 127.0.0.1)")
-    else:
-        robotIp = sys.argv[1]
+    robotIp  = '127.0.0.1'#sys.argv[1]
     #mainBlind(robotIp)
     mainBlind(robotIp)
 #OLDER FUNCTION
-#def main(robotIP, time_lag = 2, stand_speed= 0.5):
+def main(robotIP, time_lag = 2, stand_speed= 0.5):
 #    # Init proxies.
 #    #motionProxy, customProxy, postureProxy, video_service = make_proxies(robotIP,9559,False)
 #    proxy_list=[]
