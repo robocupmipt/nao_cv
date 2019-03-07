@@ -223,14 +223,15 @@ def mainBlind(robotIP, disable_state=disable_state,make_photos=make_photos, n_ch
             proxy_list.append(sess.service(proxy_name))
         motionProxy,customProxy, postureProxy,video_service,AutonomousLifeProxy = proxy_list
         AutonomousLifeProxy.setState("disabled")
-        postureProxy.goToPosture("StandInit", 0.6)
+    postureProxy.goToPosture("StandInit", 0.6)
     camera_id=0
     resolution=2
     colorSpace=11
     fps=5
-    video_client = video_service.subscribeCamera('python_client',camera_id,resolution, colorSpace, fps)
-    img_pack = video_service.getImageRemote(video_client)
-    assert img_pack is not None
+    video_client0 = video_service.subscribeCamera('python_client',camera_id,resolution, colorSpace, fps)
+    video_client1 = video_service.subscribeCamera('python_client',camera_id+1,resolution, colorSpace, fps)
+    #img_pack = video_service.getImageRemote(video_client)
+    #assert img_pack is not None
     #assert type(video_client) is not str
     print ("starting")
     t=time.time()
@@ -238,35 +239,44 @@ def mainBlind(robotIP, disable_state=disable_state,make_photos=make_photos, n_ch
     walk_dist=3
     walk_time = walk_dist/DEFAULT_SPEED
     n_chunks=11
-    extra_lag=1.5#.5   
+    extra_lag=1.5   
     time_chunk = walk_time/(n_chunks+0.0)
     #time_chunk = walk_time/10
     customProxy.StartMove()
-    motionProxy.moveTo(0,0,-13*np.pi/180)
     for i in range(n_chunks+1):
+        if i==1:
+            motionProxy.moveTo(0,0,-12.5*np.pi/180)#was -13
         print('chunk '+str(i))
-        if i==((n_chunks+1)//2):#We do it at the beginning, not at the end, so reduced by 1
+        if (i==((n_chunks+1)//2) or (i==n_chunks-1)):#We do it at the beginning, not at the end, so reduced by 1
             motionProxy.setAngles(["HeadPitch","HeadYaw"],[0,0],0.3)
-            img_pack = video_service.getImageRemote(video_client)
+            print('making photo')
+            if i==n_chunks-1:
+                img_pack = video_service.getImageRemote(video_client1)
+            else:
+                img_pack = video_service.getImageRemote(video_client0)
             if img_pack is None:
+                print('NO IMAGE RECEIVED')
                 turn_flag=-1
             else:
                 img = np.array(Image.frombytes("RGB",(img_pack[0],img_pack[1]),bytes(img_pack[6])))
                 image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 cv2.imwrite('PHOTO_'+str(i)+'.jpg',image)
-                turn_flag = ShouldTurn(image, allowed_gamma=0)
-            motionProxy.moveTo(0,0,turn_flag*15*np.pi/180)
+                turn_flag = ShouldTurn(image, allowed_gamma=6)
+            if (i==n_chunks-1):
+                angle=turn_flag*5*np.pi/180
+            else:
+                angle=turn_flag*16*np.pi/180
+                print('POVOROT')
+                motionProxy.moveTo(0,0,angle)
         customProxy.GoForvard(walk_dist)#walk walk_dist meters forward
         time.sleep(time_chunk)
         customProxy.StopMove()
         time.sleep(extra_lag)
 
             
-    postureProxy.goToPosture("StandInit", 0.6)
     print('going back')
     time.sleep(2)
     time_chunk = time_chunk/2
-    postureProxy.goToPosture("StandInit", 0.6)
     customProxy.StartMove()
     
 #    for i in (range(n_chunks)):
