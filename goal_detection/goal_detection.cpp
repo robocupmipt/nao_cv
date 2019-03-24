@@ -8,6 +8,23 @@
 using namespace cv;
 using namespace std;
 
+void detect_lines (Mat img, Mat cdst)
+    {
+    Mat dst;
+    Canny (img, dst, 50, 200, 3);
+    cvtColor (dst, cdst, CV_GRAY2BGR);
+
+    vector <Vec4i> lines;
+
+    HoughLinesP (dst, lines, 1, CV_PI/180, 50, 50, 10 );
+
+    for (size_t i = 0; i < lines.size (); i ++ )
+        {
+        Vec4i l = lines [i];
+        line (cdst, Point (l [0], l [1]), Point (l [2], l [3]), Scalar (0,0,255), 3, CV_AA);
+        }
+    }
+
 Rect detect_goal (Mat img, Mat& res)
     {
     Mat imgThresholded;
@@ -18,10 +35,12 @@ Rect detect_goal (Mat img, Mat& res)
     int iLowS = 0;
     int iHighS = 111;
 
-    int iLowV = 246;
+    int iLowV = 249;
     int iHighV = 255;
 
     Mat imgHSV;
+
+    medianBlur (img, img, 3);
 
     cvtColor (img, imgHSV, COLOR_BGR2HSV);
 
@@ -131,11 +150,16 @@ int main( int argc, char** argv )
         Mat imgThresholded;
         Rect rect = detect_goal (imgOriginal, imgThresholded);
 
-        Scalar color (255, 0, 0);
-        cv::rectangle (imgOriginal, rect, color, 5);
+        Mat lines;
+        imgOriginal.copyTo (lines);
+        detect_lines (imgOriginal, lines);
 
-        imshow("Thresholded Image", imgThresholded); //show the thresholded image
-        imshow("Original", imgOriginal); //show the original image
+        Scalar color (255, 0, 0);
+        rectangle (imgOriginal, rect, color, 5);
+
+        imshow ("Thresholded Image", imgThresholded); //show the thresholded image
+        imshow ("Original", imgOriginal); //show the original image
+        imshow ("Lines", lines); //show the original image
 
         if (waitKey(30) == 27) //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
                 {
