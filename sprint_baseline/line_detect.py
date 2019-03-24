@@ -136,7 +136,7 @@ def line_filter(lines):
         del lines[ind]
     return lines
 
-def getLines (img, edit_shape=(480,360)):
+def getLines (img, edit_shape=(480,360), filter_lines=False):
     #init_shape=img.shape
     #img = cv2.resize(img,edit_shape)
     
@@ -174,5 +174,6 @@ def getLines (img, edit_shape=(480,360)):
             x_min=min(x1,x2)
             x_max=max(x1,x2)
             answer.append(Line(k,b,x_min,x_max))
-        #answer = line_filter(answer)
+        if filter_lines:
+            answer = line_filter(answer)
     return answer
