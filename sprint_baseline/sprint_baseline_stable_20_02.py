@@ -92,7 +92,7 @@ def main(robotIP):
     ###########################################
 
     #чтобы работал поворот
-    tts = ALProxy("MovementGraph", "192.168.1.67", 9559)
+    tts = ALProxy("MovementGraph", "192.168.1.2", 9559)
 
     session = qi.Session()
     try:

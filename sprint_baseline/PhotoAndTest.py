@@ -6,52 +6,53 @@ Created on Fri Mar  1 09:08:19 2019
 @author: robocup
 """
 
-import qi
+#import qi
 from PIL import Image
 import cv2
 import os
-os.chdir('/home/robocup/nao')
-IP='192.168.1.13'
-PORT=9559
-resolution = 2
-CameraIndex=0   # VGA
-colorSpace = 11 
-ses = qi.Session()
-ses.connect(IP)
-YAW,PITCH=0,0
-video= ses.service('ALVideoDevice')
-motionProxy  = ses.service('ALMotion')
-customMotionProxy = ses.service('MovementGraph')
-postureProxy = ses.service('ALRobotPosture')
-videoClient0 = video.subscribeCamera(
-        "python_client", 0, resolution, colorSpace, 5)
-videoClient1 = video.subscribeCamera(
-        "python_client", 1, resolution, colorSpace, 5)
-image_name='6.jpg'
-def get_photo(
-              image_index=0,pitch=0,yaw=0,speed=0.1,
-              save_image=True,set_angles=False,video=video
-              ):
-    '''
-    pitch - vertical angle(in RAD, from -0.67 to 0.51 )
-    yaw - horisontal angle(in RAD, from -2.08 to 2.08)
-    speed - speed of placing angles to this place
-    cameraIndex  -index of camera ( 0 is top camera, 1 is bottom camera)
-    save_image : whether we save image or not
-    image_name - name used for saving(if not specified, default name is generated)
-    '''
-    if set_angles:
-        motionProxy.setAngles(["HeadPitch","HeadYaw"],[pitch,yaw],speed)
-    for client, i in zip([videoClient0,videoClient1],['0','1,']):
-        naoImage = video.getImageRemote(client)
-        im = Image.frombytes("RGB", (naoImage[0],naoImage[1]), bytes(naoImage[6]))
-        if save_image:
-            im.save('image'+str(image_index)+'cam'+str(i)+'_'+str(yaw)+'_'+str(pitch)+'.jpg')
-ss=0
-while True:
-   print('Нажмите 0 для выхода, иное число для съема ')
-   get_photo(ss)
-   ss+=1
+
+#os.chdir('/home/robocup/nao')
+#IP='192.168.1.13'
+#PORT=9559
+#resolution = 2
+#CameraIndex=0   # VGA
+#colorSpace = 11 
+#ses = qi.Session()
+#ses.connect(IP)
+#YAW,PITCH=0,0
+#video= ses.service('ALVideoDevice')
+#motionProxy  = ses.service('ALMotion')
+#customMotionProxy = ses.service('MovementGraph')
+#postureProxy = ses.service('ALRobotPosture')
+#videoClient0 = video.subscribeCamera(
+#        "python_client", 0, resolution, colorSpace, 5)
+#videoClient1 = video.subscribeCamera(
+#        "python_client", 1, resolution, colorSpace, 5)
+#image_name='6.jpg'
+#def get_photo(
+#              image_index=0,pitch=0,yaw=0,speed=0.1,
+#              save_image=True,set_angles=False,video=video
+#              ):
+#    '''
+#    pitch - vertical angle(in RAD, from -0.67 to 0.51 )
+#    yaw - horisontal angle(in RAD, from -2.08 to 2.08)
+#    speed - speed of placing angles to this place
+#    cameraIndex  -index of camera ( 0 is top camera, 1 is bottom camera)
+#    save_image : whether we save image or not
+#    image_name - name used for saving(if not specified, default name is generated)
+#    '''
+#    if set_angles:
+#        motionProxy.setAngles(["HeadPitch","HeadYaw"],[pitch,yaw],speed)
+#    for client, i in zip([videoClient0,videoClient1],['0','1,']):
+#        naoImage = video.getImageRemote(client)
+#        im = Image.frombytes("RGB", (naoImage[0],naoImage[1]), bytes(naoImage[6]))
+#        if save_image:
+#            im.save('image'+str(image_index)+'cam'+str(i)+'_'+str(yaw)+'_'+str(pitch)+'.jpg')
+#ss=0
+#while True:
+#   print('Нажмите 0 для выхода, иное число для съема ')
+#   get_photo(ss)
+#   ss+=1
 from line_detect import getLines
 from sprint_baseline import processLines, getObjectCentre
 def log(image, lines,other_lines, center, image_name, thickness=1,circle_range=10):
@@ -61,12 +62,12 @@ def log(image, lines,other_lines, center, image_name, thickness=1,circle_range=1
     for line in other_lines:
         cv2.line(image,
             (line.xmin,line.y(line.xmin)),
-            (line.xmax,line.y(line.xmax)),(0,0,0),thickness)
+            (line.xmax,line.y(line.xmax)),(0,0,0),thickness=3)
     for (line,color) in zip(lines,colors):
         if line is not None:
             cv2.line(image,
             (line.xmin,line.y(line.xmin)),
-            (line.xmax,line.y(line.xmax)),color,thickness)         
+            (line.xmax,line.y(line.xmax)),color,thickness=3)         
     cv2.imwrite(''+image_name+'EDITED.jpg',image)
 
 for image_name in os.listdir(os.getcwd()) :
@@ -79,11 +80,13 @@ for image_name in os.listdir(os.getcwd()) :
         other_lines = getLines(image)
         lines = processLines(other_lines)
         center = getObjectCentre(image,mode='redbox')
+	
         log(image,lines,other_lines,tuple(center), image_name)
-walk_dist=1#meters
-n_times=3#times
 
-print('Все, дальше тестируем ходьбу - введите что угодно и поставьте робота так чтобы он мог пройти '+str(walk_dist*n_times)+' метров вперед')
+#walk_dist=1#meters
+#n_times=3#times
+
+"""print('Все, дальше тестируем ходьбу - введите что угодно и поставьте робота так чтобы он мог пройти '+str(walk_dist*n_times)+' метров вперед')
 z=input()
 
 def prepare(motionProxy, postureProxy, stand_speed=0.5):
@@ -112,3 +115,4 @@ for i in range(2):
              used_proxy.()#walk walk_dist meters backward
              dir_='backward'
         print('Walking for '+str(walk_dist)+' m '+str(dir)+' took '+str(time.time()-t)+' sec')
+"""

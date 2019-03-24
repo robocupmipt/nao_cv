@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import time
-import qi
+#import qi
 import argparse
 import sys
 import time
