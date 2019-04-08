@@ -14,6 +14,73 @@ import time
 import qi
 
 
+import numpy as np
+import math
+
+def position_calc(k1, k2, x0, y0):
+    """
+    Makes necessary calculations
+    
+    Arguments:
+        k1 - rotation around Z axis angle. from -1 to 1
+        k2 - incline  angle.               from  0 t0 1
+        x0 - x coordinate of the point on the screen, pixels
+        y0 - y coordinate of the point on the screen, pixels
+        
+    """   
+    
+    pi  = np.pi
+    cos = math.cos
+    sin = math.sin
+
+
+    ###__constants__####
+
+    h0 =  45.959                    #height of the neck joint, cm
+    h2 =  5.071                     #position of the photomatrix relative to the neck joint along the Y axis, cm
+    h3 =  6.364                     #position of the photomatrix relative to the neck joint along the Z axis, cm
+    f  =  600                       #photomatrix-lens distanse, px
+
+
+    e1 =  np.array([0, 0, 1])              #Z axis vector 
+    e2 =  np.array([1, 0, 0])              #X axis vector
+    H  =  h0 * e1                          #neck joint vector
+    L0 =  np.array([0, h2, h3])            #position of the lens reletive to neck joint vector
+    q0 =  -np.array([x0, f, y0])            #position of the point on the photomatrix vector reletive to lens
+    Q0 =  L0 + q0                          #position of the point on the photomatrix vector reletive to neck joint
+
+
+
+    def rotation_matrix(axis, theta):
+        """
+        Return the rotation matrix associated with counterclockwise rotation about
+        the given axis by theta radians.
+        """
+        axis = np.asarray(axis)
+        axis = axis / math.sqrt(np.dot(axis, axis))
+        a = math.cos(theta / 2.0)
+        b, c, d = -axis * math.sin(theta / 2.0)
+        aa, bb, cc, dd = a * a, b * b, c * c, d * d
+        bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+        return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                         [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                         [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+
+
+    a1 =  pi/2 * k1                  #rotation around Z axis angle
+    a2 = -pi/2 * k2                  #incline  angle
+
+    R1 = rotation_matrix(e1, a1)     #rotaion around Z axis matrix
+    R2 = rotation_matrix(e2, a2)     #incline up-down matrix
+    R  = np.matmul(R1, R2)           #full rotation matrix
+
+
+    Q = R.dot(Q0) + H                #position of the point on the screen reletive to floor vector
+    q = R.dot(q0)                    #ligth ray vector
+    
+    return Q, q
+
+
 
 class CVConnector(object):
     def __init__(self, ip, 
@@ -118,7 +185,23 @@ class CVConnector(object):
         
         return balls[0]
 
-    def get_all_ball_data(self):
+    def get_real_coords(self, c_x, c_y):
+        if self.camera_id == 0:
+            f = 600
+            L = 42
+            d = L / np.pi            
+            D = f/w*d        
+            Q, q = position_calc(0, a, c_x, c_y)           
+            L = Q - q            
+            A = L - q / q[2] * L[2]
+            A1 = A * np.sqrt(D**2 - L[2]**2) /np.linalg.norm(A)           
+            X = A[0]
+            Z = L[2]
+            Y = np.sqrt(D**2 - Z**2 - X**2)
+            return (X,Y,Z)
+        else:
+            return (0,0,0)
+    def get_all_ball_data(self, return_realcoords = True):
         ball_coords = self._get_ball()
         if ball_coords is None or len(ball_coords) == 0:
             #cv2.imwrite("images/bad/{}.jpg".format(time.time()), self.last_image)
@@ -126,95 +209,28 @@ class CVConnector(object):
 
 
         x, y, w, h = ball_coords
-        img = self.last_image
-        #cv2.rectangle(img,
-        #              (x, y), (x + w, y + h),
-        #              (255, 0, 0), 2)
         image_h, image_w = self.last_shape[:2]
 
         #cv2.imwrite("images/good/{}.jpg".format(time.time()), img)
 
         print("DEBUG: " + str(ball_coords))
-        print("DEBUF: " + str(img.shape[:2]))
 
         y = image_h - y
-        center_x = x + w // 2 - image_w // 2
-        center_y = y + h // 2 - image_h // 2
-        return center_x, center_y, w, h
+        c_x = x + w // 2 - image_w // 2
+        c_y = y + h // 2 - image_h // 2
+
+        real_coords = self.get_real_coords(c_x, c_y)
+        if return_realcoords:
+            return real_coords
+        else:
+            return c_x,c_y,w,h
         
 
-import numpy as np
-import math
-
-def position_calc(k1, k2, x0, y0):
-    """
-    Makes necessary calculations
-    
-    Arguments:
-        k1 - rotation around Z axis angle. from -1 to 1
-        k2 - incline  angle.               from  0 t0 1
-        x0 - x coordinate of the point on the screen, pixels
-        y0 - y coordinate of the point on the screen, pixels
-        
-    """   
-    
-    pi  = np.pi
-    cos = math.cos
-    sin = math.sin
-
-
-    ###__constants__####
-
-    h0 =  45.959                    #height of the neck joint, cm
-    h2 =  5.071                     #position of the photomatrix relative to the neck joint along the Y axis, cm
-    h3 =  6.364                     #position of the photomatrix relative to the neck joint along the Z axis, cm
-    f  =  600                       #photomatrix-lens distanse, px
-
-
-    e1 =  np.array([0, 0, 1])              #Z axis vector 
-    e2 =  np.array([1, 0, 0])              #X axis vector
-    H  =  h0 * e1                          #neck joint vector
-    L0 =  np.array([0, h2, h3])            #position of the lens reletive to neck joint vector
-    q0 =  -np.array([x0, f, y0])            #position of the point on the photomatrix vector reletive to lens
-    Q0 =  L0 + q0                          #position of the point on the photomatrix vector reletive to neck joint
-
-
-
-    def rotation_matrix(axis, theta):
-        """
-        Return the rotation matrix associated with counterclockwise rotation about
-        the given axis by theta radians.
-        """
-        axis = np.asarray(axis)
-        axis = axis / math.sqrt(np.dot(axis, axis))
-        a = math.cos(theta / 2.0)
-        b, c, d = -axis * math.sin(theta / 2.0)
-        aa, bb, cc, dd = a * a, b * b, c * c, d * d
-        bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
-        return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
-                         [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
-                         [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
-
-
-    a1 =  pi/2 * k1                  #rotation around Z axis angle
-    a2 = -pi/2 * k2                  #incline  angle
-
-    R1 = rotation_matrix(e1, a1)     #rotaion around Z axis matrix
-    R2 = rotation_matrix(e2, a2)     #incline up-down matrix
-    R  = np.matmul(R1, R2)           #full rotation matrix
-
-
-    Q = R.dot(Q0) + H                #position of the point on the screen reletive to floor vector
-    q = R.dot(q0)                    #ligth ray vector
-    
-    return Q, q
 
 
 
 
-
-
-IP = '192.168.1.61'
+IP = '192.168.1.60'
 sess =qi.Session()
 sess.connect(IP)
 stand_speed=0.8
@@ -228,14 +244,13 @@ a = 0.4
 image_name='ggg.jpg'
 image = cv2.imread('IMM.jpg')
 MotionProxy = sess.service('ALMotion')
-MotionProxy.setAngles(['HeadPitch'],[a],1)
-time.sleep(1)
+MotionProxy.setAngles(['HeadPitch'],[a],0.1)
+time.sleep(2)
 connector = CVConnector(IP, camera_id=0)
-ball = connector._get_ball(save_image=True, save_dir='PHOTO0.jpg')
+ball = connector._get_ball(save_image=True, save_dir='PHOTO2.jpg',get_image=False)
 x,y,w,h = ball
 
-
-
+#h=h-5
 
 f = 600
 L = 42
