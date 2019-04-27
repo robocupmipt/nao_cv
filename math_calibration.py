@@ -20,7 +20,7 @@ norm = np.linalg.norm
 def cast(a):    
     '''
     Gets output of cv2.findChessboardCorners
-    Returns an array of corners to necessary shape
+    Returns an array of corners of necessary shape
     '''
     b = np.zeros([len(a), 2])
     for i in range(len(b)):
@@ -60,10 +60,10 @@ def pix_trans(b):
 
 def pixels2rays(points, f):
     '''
-    Gets array of points  [n, 3] like [x, y, 0]
+    Gets array of shape (n, 3) of points like [x, y, 0]
     Cast points on the photomatrix in central reference system to components of light ray vector 
     knowing optical vector f
-    Return array of light [n, 3]
+    Return array of light of shape (n, 3)
     '''
     x0 = arr([-f[1], f[0], 0])    #x axis on the image in central reference system orthogonal to f
     x0 = x0/norm(x0)
@@ -98,7 +98,6 @@ def real_coordinates(pixels, foc, Len):
     return real_points
 
 def calibration1(size, am): 
-    
     '''
     Gets size of the desk and point on photomatrix
     Returns 3d coordinates of the lens in the space - L, and componets of optical axis of the lens - f
