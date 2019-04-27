@@ -206,7 +206,7 @@ def calibration1(size, am):
 def calibration_data(img, shape, size):
     '''
     Gets image, shape of desk to find, size of the desk
-    Returns huge heap of ulgy calibration information
+    Returns huge ugly heap of calibration information
     '''
     _,start_cors = cv2.findChessboardCorners(img, shape)  #find corners of all squares on the image
     
