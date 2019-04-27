@@ -203,44 +203,28 @@ def calibration1(size, am):
     return f, L
 
 
-
-
-image0 = cv2.imread('IMAGE_0_0.0_35.jpg')      #reading imagines
-image1 = cv2.imread('IMAGE_0_0.1_35.jpg')
-image2 = cv2.imread('IMAGE_0_0.2_35.jpg')
-image3 = cv2.imread('IMAGE_0_0.3_35.jpg')
-
-start_cors = [[], [], []]     #collecting all corners
-
-
-_,start_cors[0] = cv2.findChessboardCorners(image0,(7,7))  #find corners of all squares on the image
-_,start_cors[1] = cv2.findChessboardCorners(image1,(7,7))
-_,start_cors[2] = cv2.findChessboardCorners(image2,(7,7))
-
-
-cors = np.zeros([len(start_cors), 3, 3])           #array for desk corners. three corners of three coordinates
-
-for i in range(len(start_cors)):                   #extraction of desk corners
-    cors[i][:,:-1] = corners(cast(start_cors[i]))
+def calibration_data(img, shape, size):
+    '''
+    Gets image, shape of desk to find, size of the desk
+    Returns huge heap of ulgy calibration information
+    '''
+    _,start_cors = cv2.findChessboardCorners(img, shape)  #find corners of all squares on the image
     
-cors = arr(cors)
+    cors = np.zeros([3, 3])
+    cors[:,:-1] = corners(cast(start_cors))               #extraction of desk corners. casting from (1,2) to (1,3) shape
     
-pixels = pix_trans(cors)                           #cast image coordinates to normal reference system 
-
+    points = pix_trans(cors)                              #cast image coordinates to normal reference system 
     
-points = pix_trans(cors)
-
-size = 51/8*7
-
-for j in range(len(pixels)):
-    pix = points[j] 
-    f, L = calibration1(size, pix)
-
+    f, L = calibration(size, points)                      #optical vector and lens position
+    
+    data = ()                                             #collecting all data
     for i in range(len(f)):
-        print ('|f|   = ', norm(f[i])) 
-        print ('angle = ', 180/pi*(-acos(f[i][1]/norm(f[i]))+pi))
-        print ('L     = ', L[i])
-        print ('f     = ', f[i])
-        print ()
-print ()
-
+        f_norm  = ('opt_len', np.int((norm(f[i]))))
+        incline = ('incline', np.around(180/pi*acos(np.sqrt(f[i][0]**2 + f[i][1]**2)/norm(f[i])), 1),)
+        turn    = ('turn   ', np.around(180/pi*atan(f[i][0] / f[i][1]), 2),)
+        lens    = ('lens   ', L[i])
+        foc     = ('optical', f[i])
+        data   += ((f_norm, incline, turn, lens, foc))
+    
+    data += ('corners', cors)                            #adding array of corners
+    return data
