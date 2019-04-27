@@ -58,7 +58,8 @@ using namespace std;
 
  int main( int argc, char** argv )
  {
-    VideoCapture cap(0); //capture the video from web cam
+    //VideoCapture cap(0); //capture the video from web cam
+    VideoCapture cap ("inp.webm"); //capture the video from web cam
 
     if ( !cap.isOpened() )  // if not success, exit program
     {
@@ -87,17 +88,24 @@ using namespace std;
   cvCreateTrackbar("LowV", "Control", &iLowV, 255); //Value (0 - 255)
  cvCreateTrackbar("HighV", "Control", &iHighV, 255);
 
+    Mat imgOriginal;
+
+    //bool bSuccess = cap.read(imgOriginal); // read a new frame from video
+
+    //imgOriginal = imread ("field.jpg", IMREAD_COLOR );
+    imgOriginal = imread ("lines.jpg", IMREAD_COLOR );
+
     while (true)
-    {
-        Mat imgOriginal;
-
-        bool bSuccess = cap.read(imgOriginal); // read a new frame from video
-
-         if (!bSuccess) //if not success, break loop
         {
-             cout << "Cannot read a frame from video stream" << endl;
-             break;
-        }
+        //Mat imgOriginal;
+
+        //lsbool bSuccess = cap.read(imgOriginal); // read a new frame from video
+
+         //if (!bSuccess) //if not success, break loop
+        //{
+        //     cout << "Cannot read a frame from video stream" << endl;
+        //     break;
+        //}
 
     Mat imgHSV;
 
